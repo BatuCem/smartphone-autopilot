@@ -22,7 +22,7 @@ char read_BL_serial = Serial.read();
 Serial.println(read_BL_serial);
 
 if( read_BL_serial == 'F' ) { // if read_BL_serial 'F'
-/* araç ileri gitsin */
+/* drive forward */
 digitalWrite(right_FW, 1);
 digitalWrite(right_BW, 0);
 digitalWrite(left_FW, 1);
@@ -32,7 +32,7 @@ analogWrite(left_EN, 255);
 }
 
 if( read_BL_serial == 'R' ) { //if read_BL_serial 'R'
-/* araç sağa dönsün */
+/* drive right */
 digitalWrite(right_FW, 0);
 digitalWrite(right_BW, 1);
 digitalWrite(left_FW, 1);
@@ -42,7 +42,7 @@ analogWrite(left_EN, 200);
 }
 
 if( read_BL_serial == 'L' ) { //if read_BL_serial 'L'
-/* araç sola dönsün */
+/* drive left */
 digitalWrite(right_FW, 1);
 digitalWrite(right_BW, 0);
 digitalWrite(left_FW, 0);
@@ -52,7 +52,7 @@ analogWrite(left_EN, 200);
 }
 
 if( read_BL_serial == 'B' ) { // if read_BL_serial 'B'
-/* araç geri gitsin */
+/* drive back */
 digitalWrite(right_FW, 0);
 digitalWrite(right_BW, 1);
 digitalWrite(left_FW, 0);
@@ -62,7 +62,7 @@ analogWrite(left_EN, 255);
 }
 
 if( read_BL_serial == 'S' ) { // if read_BL_serial 'S'
-/* araç dursun */
+/* stop driving */
 digitalWrite(right_FW, 0);
 digitalWrite(right_BW, 0);
 digitalWrite(left_FW, 0);
