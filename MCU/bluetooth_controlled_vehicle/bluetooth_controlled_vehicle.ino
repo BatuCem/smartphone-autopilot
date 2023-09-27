@@ -76,8 +76,8 @@ void setup(){
   #endif
 Serial.begin(9600);
 }
-
 void loop() {
+  
   int speeds[]={0,0};
   String RX_data=RX_String();
   if(RX_data!="NULL")
@@ -85,7 +85,7 @@ void loop() {
     parse_Command(speeds,RX_data);
     set_Speed(speeds);
   }
-  
+ 
   
   }
 
@@ -93,6 +93,7 @@ String RX_String(){
   #if (MODEL==PROT_ARD0)
   if (Serial.available()>0) {
     return Serial.readStringUntil('\n');
+    
   }
   else{
     return "NULL";
@@ -100,7 +101,7 @@ String RX_String(){
   #elif (MODEL==PROT_ESP0)
   if(BTconn.available())
   {
-    return BTconn.readString();
+    return BTconn.readStringUntil('\n');
   }
   else
   {
