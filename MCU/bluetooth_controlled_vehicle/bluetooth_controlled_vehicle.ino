@@ -11,7 +11,7 @@
 
 //Global Setup
 #define MODEL PROT_ESP0
-int8_t MAX_Speed=60;
+int8_t MAX_PWM=150;
 //Define Model Properties
 //Arduino Prototype 0
 #if (MODEL==PROT_ARD0)
@@ -28,20 +28,13 @@ const int right_EN = 6;   // ENABLE B
 //ESP32 Prototype 0
 #elif (MODEL == PROT_ESP0)
 #include <BluetoothSerial.h>
-const String robot_type = "ESP32 Prototype 0";
+const String model_name = "ESP32 Prototype 0";
 #define MCU ESP32
 #define analogWrite ledcWrite
-/*#define attachPinChangeInterrupt attachInterrupt
-#define detachPinChangeInterrupt detachInterrupt
-#define digitalPinToPinChangeInterrupt digitalPinToInterrupt
-#define PIN_PWM_L1 CH_PWM_L1
-#define PIN_PWM_L2 CH_PWM_L2
-#define PIN_PWM_R1 CH_PWM_R1
-#define PIN_PWM_R2 CH_PWM_R2*/
 //Setup Bluetooth
 BluetoothSerial BTconn;
 //PWM properties
-const int FREQ = 1000;
+const int FREQ = 5000;
 const int RES = 8;
 const int channel_LF = 0;
 const int channel_LB = 1;
@@ -54,6 +47,7 @@ const int right_BW = 33;
 
 #endif
 void setup(){
+Serial.begin(9600);
   #if (MODEL==PROT_ESP0) 
     ledcSetup(channel_LF,FREQ,RES);
     ledcSetup(channel_LB,FREQ,RES);
@@ -74,7 +68,6 @@ void setup(){
     pinMode(right_EN, OUTPUT);
     pinMode(left_EN, OUTPUT);
   #endif
-Serial.begin(9600);
 }
 
 void loop() {
@@ -85,7 +78,6 @@ void loop() {
     parse_Command(speeds,RX_data);
     set_Speed(speeds);
   }
-  
   
   }
 
@@ -115,23 +107,23 @@ void parse_Command(int* arr,String command){    //TODO: recognize command(input1
   command.remove(command.indexOf(13));
   memset(arr,0,sizeof(arr));
   if(command=="F"){
-    arr[0]=MAX_Speed;
-    arr[1]=MAX_Speed; 
+    arr[0]=MAX_PWM;
+    arr[1]=MAX_PWM; 
   }
   else if(command=="R")
   { 
-    arr[0]=MAX_Speed;
-    arr[1]=-MAX_Speed; 
+    arr[0]=MAX_PWM;
+    arr[1]=-MAX_PWM; 
   }
   else if(command=="L")
   {
-    arr[0]=-MAX_Speed;
-    arr[1]=MAX_Speed; 
+    arr[0]=-MAX_PWM;
+    arr[1]=MAX_PWM; 
   }
   else if(command=="B")
   {
-    arr[0]=-MAX_Speed;
-    arr[1]=-MAX_Speed; 
+    arr[0]=-MAX_PWM;
+    arr[1]=-MAX_PWM; 
   }
   else if(command=="S")
   {
