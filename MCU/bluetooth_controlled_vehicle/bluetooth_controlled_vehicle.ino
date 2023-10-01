@@ -75,8 +75,10 @@ void loop() {
   String RX_data=RX_String();
   if(RX_data!="NULL")
   {
+    BTconn.println("Control Point 2");
     parse_Command(speeds,RX_data);
     set_Speed(speeds);
+    BTconn.println("Control Point 3");
   }
  
   
@@ -94,6 +96,7 @@ String RX_String(){
   #elif (MODEL==PROT_ESP0)
   if(BTconn.available())
   {
+    BTconn.println("Control Point 1");
     return BTconn.readStringUntil('\n');
   }
   else
