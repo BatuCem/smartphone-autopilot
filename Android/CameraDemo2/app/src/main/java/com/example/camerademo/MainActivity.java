@@ -28,77 +28,84 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
+
+//Main Class
 public class MainActivity extends AppCompatActivity {
+    ////////////////////////////////DECLARE VARIABLES//////////////////////////////////
+    private static final String TAG="AndroidCameraApi";//error handling tag
+    private CameraManager cameraManager;//setup camera manager var from camera2 API
+    private CameraCharacteristics[] cameraCharacteristics;//array of camera characteristics
+                                                            //to hold on to objects of sizes, ids...
+    private String[] logicalCameraIds;//String array for logical cameras
+    private String[] cameraIds;//camera IDs valid for opening TextureViews from openCamera
+    private CameraDevice[] cameraDevices = new CameraDevice[2];//2 camera devices for 2 texture fields
+    private TextureView[] textureViews = new TextureView[2];//texture fields from main layout
+    private CaptureRequest.Builder[] captureRequestBuilders = new CaptureRequest.Builder[2];//
+    private CameraCaptureSession[] captureSessions = new CameraCaptureSession[2];//Capturing Sessions for textures
+    private Surface[] surfaces = new Surface[2];//Captured individual surfaces
+    private HandlerThread backgroundThread;//Handler thread for camera operations
+    private Handler backgroundHandler;//Handler that will connect with backgroundThread
+    private Size[] imageDimensions = new Size[2];//image dimensions for display and saving
+    private Set<String>[] physicalCameraIDs;//Array of string sets for physical ids
 
-    private static final String TAG="AndroidCameraApi";
-    private TextureView textureView;
-    private TextureView textureView2;
-    private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
-    static {
-        ORIENTATIONS.append(Surface.ROTATION_0,90);
-        ORIENTATIONS.append(Surface.ROTATION_90,0);
-        ORIENTATIONS.append(Surface.ROTATION_180,270);
-        ORIENTATIONS.append(Surface.ROTATION_270,180);
-    }
-
-    private CameraManager cameraManager;
-    private String[] cameraIds;
-    private CameraDevice[] cameraDevices = new CameraDevice[2];
-    private TextureView[] textureViews = new TextureView[2];
-    private CaptureRequest.Builder[] captureRequestBuilders = new CaptureRequest.Builder[2];
-    private CameraCaptureSession[] captureSessions = new CameraCaptureSession[2];
-    private Surface[] surfaces = new Surface[2];
-    private HandlerThread backgroundThread;
-    private Handler backgroundHandler;
-    private Size[] imageDimensions = new Size[2];
-
-
-    private static final int REQUEST_CAMERA_PERMISSION = 200;
+    private static final int REQUEST_CAMERA_PERMISSION = 200;//code for camera permit
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        //set to main layout
         setContentView(R.layout.activity_main);
+        //set up texture view windows
         textureViews[0] = findViewById(R.id.texture);
         textureViews[1] = findViewById(R.id.texture2);
-        cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
-        try {
-            cameraIds = cameraManager.getCameraIdList();
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
+        //ask for necessary permissions (CAMERA)
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
             return;
         }
+        //init camera manager
+        cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
+        try {//try taking logical ID list and handle for access exceptions
+            logicalCameraIds = cameraManager.getCameraIdList();
 
-
-        openCamera(cameraIds[0], 0);
-        openCamera(cameraIds[1], 1);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+        cameraCharacteristics= new CameraCharacteristics[2];
+        openCamera("0", 0);//open first camera at textView indexed 0
+        openCamera("2", 1);//open second camera at textView indexed 1
         // Initialize background thread
-        backgroundThread = new HandlerThread("CameraBackground");
-        backgroundThread.start();
+        backgroundThread = new HandlerThread("CameraBackground");//setup handler thread
+        backgroundThread.start();   //init handler thread
+        //connect thread to handler, loop the software
         backgroundHandler = new Handler(backgroundThread.getLooper());
     }
 
+    //Method to open the camera with given camera id and texture index
     private void openCamera(String cameraId, final int index){
-        try {
+        try {//try for opening camera handling permission
+
+            cameraCharacteristics[index]=cameraManager.getCameraCharacteristics(cameraId);
+            imageDimensions[index]=cameraCharacteristics[index].get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE);
+            //setup callback function of device
             cameraManager.openCamera(cameraId, new CameraDevice.StateCallback() {
-                @Override
+                @Override //when called back as open, create preview
                 public void onOpened(CameraDevice cameraDevice) {
                     cameraDevices[index] = cameraDevice;
                     createCameraPreview(index);
                 }
 
-                @Override
+                @Override //if calls back disconnected, close
                 public void onDisconnected(CameraDevice cameraDevice) {
                     cameraDevice.close();
                     cameraDevices[index] = null;
                 }
 
-                @Override
+                @Override   //when called back with error, close
                 public void onError(CameraDevice cameraDevice, int error) {
                     cameraDevice.close();
                     cameraDevices[index] = null;
@@ -109,18 +116,25 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
-    protected void createCameraPreview(final int index){
-        try {
-            SurfaceTexture texture = textureViews[index].getSurfaceTexture();
-            assert texture != null;
-            texture.setDefaultBufferSize(1920, 1080);
-            surfaces[index] = new Surface(texture);
 
+    //Method to create preview from in textureView
+    protected void createCameraPreview(final int index){
+        try {//try with handling permission
+
+            //get surface texture from indexed view
+            SurfaceTexture texture = textureViews[index].getSurfaceTexture();
+            //throw assertion error if textures are null
+            assert texture != null;
+            //set buffer sizes to image dimensions
+            texture.setDefaultBufferSize(imageDimensions[index].getWidth(),imageDimensions[index].getHeight());
+            //create surfaces
+            surfaces[index] = new Surface(texture);
+            //send capture request and target surfaces
             captureRequestBuilders[index] = cameraDevices[index].createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             captureRequestBuilders[index].addTarget(surfaces[index]);
-
+            //capture session callback setup
             cameraDevices[index].createCaptureSession(Arrays.asList(surfaces[index]), new CameraCaptureSession.StateCallback() {
-                @Override
+                @Override //when configured and nonnull device, capture
                 public void onConfigured(CameraCaptureSession cameraCaptureSession) {
                     if (cameraDevices[index] == null) {
                         return;
@@ -128,7 +142,7 @@ public class MainActivity extends AppCompatActivity {
 
                     captureSessions[index] = cameraCaptureSession;
 
-                    try {
+                    try {   //send repeating capture requests, handling permissions
                         captureRequestBuilders[index].set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
                         captureSessions[index].setRepeatingRequest(captureRequestBuilders[index].build(), null, backgroundHandler);
                     } catch (CameraAccessException e) {
@@ -136,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                @Override
+                @Override //when configure has failed to capture, log the error
                 public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
                     Log.e("MultiCameraActivity", "Camera configuration failed.");
                 }
@@ -145,55 +159,67 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-    @Override
+    @Override //handle permission results
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode,permissions,grantResults);
         if (requestCode == REQUEST_CAMERA_PERMISSION) {
+
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, reopen the cameras
+                // Permission granted, reopen cameras
                 openCamera(cameraIds[0], 0);
                 openCamera(cameraIds[1], 1);
             } else {
-                // Permission denied, handle accordingly (e.g., show a message)
+                // TODO: handle PERMISSION DENIAL
             }
         }
     }
 
-    @Override
+    @Override //start background threading when resumed after pause
     protected void onResume() {
-        super.onResume();
+        //restart thread
         startBackgroundThread();
+        super.onResume();
     }
 
-    @Override
+    @Override   //task on pause (lock screen etc.)
     protected void onPause() {
-        closeCamera();
+        //shut down camera (commented out)
+        //closeCamera();
+        //stop thread
         stopBackgroundThread();
         super.onPause();
     }
 
-    private void closeCamera() {
+    private void closeCamera() {//safely close cameras
         for (int i = 0; i < 2; i++) {
             if (cameraDevices[i] != null) {
+                //close devices
                 cameraDevices[i].close();
+                //nullify cameras
                 cameraDevices[i] = null;
             }
         }
     }
 
-    private void startBackgroundThread() {
+    private void startBackgroundThread() {//background thread restart
         if (backgroundThread == null) {
-            backgroundThread = new HandlerThread("CameraBackground");
+            //rename thread
+            backgroundThread = new HandlerThread("CameraBackground restart");
+            //restart thread
             backgroundThread.start();
+            //renew handler connected to thread
             backgroundHandler = new Handler(backgroundThread.getLooper());
         }
     }
 
     private void stopBackgroundThread() {
         if (backgroundThread != null) {
+            //stop threading safely
             backgroundThread.quitSafely();
             try {
+                //wait until thread quits
                 backgroundThread.join();
+                //nullify thread and handler
                 backgroundThread = null;
                 backgroundHandler = null;
             } catch (InterruptedException e) {
