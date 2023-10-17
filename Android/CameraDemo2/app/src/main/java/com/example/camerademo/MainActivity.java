@@ -39,8 +39,8 @@ public class MainActivity extends AppCompatActivity {
     private CameraManager cameraManager;//setup camera manager var from camera2 API
     private CameraCharacteristics[] cameraCharacteristics;//array of camera characteristics
                                                             //to hold on to objects of sizes, ids...
-    private String[] logicalCameraIds;//String array for logical cameras
-    private String[] cameraIds;//camera IDs valid for opening TextureViews from openCamera
+    private String[] backCameraIds;//String array for logical cameras
+    private String[] frontCameraIds;
     private CameraDevice[] cameraDevices = new CameraDevice[2];//2 camera devices for 2 texture fields
     private TextureView[] textureViews = new TextureView[2];//texture fields from main layout
     private CaptureRequest.Builder[] captureRequestBuilders = new CaptureRequest.Builder[2];//
@@ -49,8 +49,6 @@ public class MainActivity extends AppCompatActivity {
     private HandlerThread backgroundThread;//Handler thread for camera operations
     private Handler backgroundHandler;//Handler that will connect with backgroundThread
     private Size[] imageDimensions = new Size[2];//image dimensions for display and saving
-    private Set<String>[] physicalCameraIDs;//Array of string sets for physical ids
-
     private static final int REQUEST_CAMERA_PERMISSION = 200;//code for camera permit
 
 
@@ -69,15 +67,11 @@ public class MainActivity extends AppCompatActivity {
         }
         //init camera manager
         cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
-        try {//try taking logical ID list and handle for access exceptions
-            logicalCameraIds = cameraManager.getCameraIdList();
-
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
         cameraCharacteristics= new CameraCharacteristics[2];
-        openCamera("0", 0);//open first camera at textView indexed 0
-        openCamera("2", 1);//open second camera at textView indexed 1
+        backCameraIds=findIDs(2, CameraCharacteristics.LENS_FACING_BACK,cameraCharacteristics[0]);
+        frontCameraIds=findIDs(1,CameraCharacteristics.LENS_FACING_FRONT,cameraCharacteristics[0]);
+        openCamera(backCameraIds[0],0);//open first camera at textView indexed 0
+        openCamera(backCameraIds[1],1);//open second camera at textView indexed 1
         // Initialize background thread
         backgroundThread = new HandlerThread("CameraBackground");//setup handler thread
         backgroundThread.start();   //init handler thread
@@ -85,9 +79,36 @@ public class MainActivity extends AppCompatActivity {
         backgroundHandler = new Handler(backgroundThread.getLooper());
     }
 
+    //method to take in a needed amount of (lim) camera IDs into a variable, with selection given
+    //the lens orientation
+    private String[] findIDs(int lim, int lensFacing,CameraCharacteristics cameraCharacteristics)
+    {
+        Set<String> idHolder= new HashSet<>(); //variable to hold ids
+        int k=0;    //added element counter
+        int i=0;    //sweep counter
+        try {
+            while(k<lim) {
+                //
+                cameraCharacteristics = cameraManager.getCameraCharacteristics(String.valueOf(i));
+
+                if(cameraCharacteristics.get(CameraCharacteristics.LENS_FACING)==lensFacing)
+                {
+                    idHolder.add(String.valueOf(i));
+                    k++;
+                }
+                i++;
+            }
+        }catch (CameraAccessException e)
+        {
+            e.printStackTrace();
+        }
+        cameraCharacteristics=null;
+        return idHolder.toArray(new String[0]);
+    }
     //Method to open the camera with given camera id and texture index
-    private void openCamera(String cameraId, final int index){
+    private void openCamera(String cameraId,int index){
         try {//try for opening camera handling permission
+
 
             cameraCharacteristics[index]=cameraManager.getCameraCharacteristics(cameraId);
             imageDimensions[index]=cameraCharacteristics[index].get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE);
@@ -166,8 +187,8 @@ public class MainActivity extends AppCompatActivity {
 
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Permission granted, reopen cameras
-                openCamera(cameraIds[0], 0);
-                openCamera(cameraIds[1], 1);
+                openCamera(backCameraIds[0], 0);
+                openCamera(backCameraIds[1], 1);
             } else {
                 // TODO: handle PERMISSION DENIAL
             }
@@ -184,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
     @Override   //task on pause (lock screen etc.)
     protected void onPause() {
         //shut down camera (commented out)
-        //closeCamera();
+        closeCamera();
         //stop thread
         stopBackgroundThread();
         super.onPause();

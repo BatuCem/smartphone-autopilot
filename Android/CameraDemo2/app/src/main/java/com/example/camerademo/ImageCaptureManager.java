@@ -1,92 +1,75 @@
 package com.example.camerademo;
 
+
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.media.Image;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCaptureSession;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraDevice;
+import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.params.OutputConfiguration;
+import android.media.ImageReader;
 import android.os.Handler;
-import android.os.HandlerThread;
-import android.util.Size;
+import android.view.Surface;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-
-import androidx.camera.core.CameraSelector;
-import androidx.camera.core.ImageAnalysis;
-import androidx.camera.core.ImageCapture;
-import androidx.camera.core.ImageProxy;
-import androidx.camera.core.Preview;
-import androidx.camera.core.impl.ImageAnalysisConfig;
-import androidx.camera.core.impl.ImageCaptureConfig;
-import androidx.camera.lifecycle.ProcessCameraProvider;
-import androidx.core.content.ContextCompat;
-import androidx.lifecycle.LifecycleOwner;
-
-import com.google.common.util.concurrent.ListenableFuture;
+import java.util.Set;
 
 public class ImageCaptureManager {
-    private final Context context;
-    private final List<Bitmap> capturedImages= new ArrayList<>();
-    private final int captureFps;
-    private Executor cameraExecutor= Executors.newSingleThreadExecutor();
-    private ImageCapture imageCapture;
-    private int captureCount = 0;
-    public ImageCaptureManager(Context context, int captureFps) {
-        this.context = context;
-        this.captureFps = captureFps;
-        startCamera();
+    private int FPS;//Frames per second
+    private Context context;
+    private int backCams;
+    private int frontCams;
+    private CameraManager cameraManager;
+    private CameraDevice cameraDevice;
+    private CameraCharacteristics cameraCharacteristics;
+    private String[] backCameraIds;
+    private String[] frontCameraIds;
+    private CaptureRequest.Builder captureRequestBuilders;
+    private CameraCaptureSession captureSession;
+    private ImageReader imageReader;
+
+    public ImageCaptureManager(Context context,int backCams,int frontCams, int FPS)
+    {
+        this.context=context;
+        this.backCams=backCams;
+        this.frontCams=frontCams;
+        this.cameraManager=(CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
     }
 
-    private void startCamera() {
-        final ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(context);
 
-        cameraProviderFuture.addListener(() -> {
-            try {
-                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                bindCameraUseCases(cameraProvider);
-            } catch (Exception e) {
-                e.printStackTrace();
+
+    //method to take in a needed amount of (lim) camera IDs into a variable, with selection given
+    //the lens orientation
+    private String[] findIDs(int lim, int lensFacing,CameraCharacteristics cameraCharacteristics)
+    {
+        Set<String> idHolder= new HashSet<>(); //variable to hold ids
+        int k=0;    //added element counter
+        int i=0;    //sweep counter
+        try {
+            while(k<lim) {
+                //
+                cameraCharacteristics = cameraManager.getCameraCharacteristics(String.valueOf(i));
+
+                if(cameraCharacteristics.get(CameraCharacteristics.LENS_FACING)==lensFacing)
+                {
+                    idHolder.add(String.valueOf(i));
+                    k++;
+                }
+                i++;
             }
-        }, ContextCompat.getMainExecutor(context));
-    }
-    private void bindCameraUseCases(ProcessCameraProvider cameraProvider) {
-        //PreviewConfig previewConfig = new PreviewConfig.Builder().setTargetResolution(new Size(640, 480)).build();
-        Preview preview = new Preview.Builder().setTargetResolution(new Size(640,480)).build();
-
-        imageCapture = new ImageCapture.Builder().build();
-
-        CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
-
-        HandlerThread handlerThread = new HandlerThread("ImageCaptureThread");
-        handlerThread.start();
-        Handler handler = new Handler(handlerThread.getLooper());
-
-
-
-        ImageAnalysis imageAnalysis = new ImageAnalysis.Builder().setTargetResolution(new Size(640,480)).build();
-        imageAnalysis.setAnalyzer(cameraExecutor, this::onImageAnalyzed);
-
-        cameraProvider.bindToLifecycle((LifecycleOwner) context, cameraSelector, preview, imageCapture, imageAnalysis);
-    }
-    private void onImageAnalyzed(ImageProxy imageProxy) {
-        if (captureCount % captureFps == 0) {
-            Image image = imageProxy.getImage();
-            if (image != null) {
-                ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-                byte[] bytes = new byte[buffer.remaining()];
-                buffer.get(bytes);
-
-                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                capturedImages.add(bitmap);
-            }
+        }catch (CameraAccessException e)
+        {
+            e.printStackTrace();
         }
+        cameraCharacteristics=null;
+        return idHolder.toArray(new String[0]);
+    }
 
-        imageProxy.close();
-    }
-    public List<Bitmap> getCapturedImages() {
-        return capturedImages;
-    }
+
 }
