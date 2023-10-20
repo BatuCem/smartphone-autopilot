@@ -1,7 +1,10 @@
 package com.example.camerademo;
 
 
+import static java.util.Arrays.asList;
+
 import android.content.Context;
+import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -9,9 +12,11 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.OutputConfiguration;
+import android.media.Image;
 import android.media.ImageReader;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.util.Range;
 import android.util.Size;
 import android.view.Surface;
 
@@ -35,10 +40,12 @@ public class ImageCaptureManager {
     private CaptureRequest.Builder[] captureRequestBuilders;
     private CameraCaptureSession[] captureSessions;
     private Surface[] surfaces;
-    private HandlerThread handlerThread;
+    private HandlerThread handlerThread=new HandlerThread("CameraBackground");
     private Handler backgroundHandler;
     private ImageReader[] imageReaders;
     private Size[] imagesDimensions;
+
+    public Image[] imageCapture;
 
     public ImageCaptureManager(Context context,int backCams,int frontCams, int FPS)
     {
@@ -54,8 +61,11 @@ public class ImageCaptureManager {
         this.captureSessions= new CameraCaptureSession[totalCameras];
         this.surfaces=new Surface[totalCameras];
         this.imageReaders=new ImageReader[totalCameras];
+
+        this.imagesDimensions=new Size[totalCameras];
         this.backCameraIds=findIDs(this.backCams,CameraCharacteristics.LENS_FACING_BACK,this.cameraCharacteristics[0]);
         this.frontCameraIds=findIDs(this.frontCams,CameraCharacteristics.LENS_FACING_FRONT,this.cameraCharacteristics[0]);
+        this.imageCapture= new Image[totalCameras];
         int k=0;
         for (int i=k;i<backCams;i++)
         {
@@ -103,15 +113,26 @@ public class ImageCaptureManager {
     private void openCamera(String cameraId,int index){
         try {//try for opening camera handling permission
 
-
+            handlerThread.start();
+            backgroundHandler=new Handler(handlerThread.getLooper());
             cameraCharacteristics[index]=cameraManager.getCameraCharacteristics(cameraId);
             imagesDimensions[index]=cameraCharacteristics[index].get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE);
+
+            imageReaders[index]= ImageReader.newInstance(imagesDimensions[index].getWidth(), imagesDimensions[index].getHeight(), ImageFormat.JPEG,1);
+            imageReaders[index].setOnImageAvailableListener(reader -> {
+                Image image = reader.acquireLatestImage();
+                if(image!=null)
+                {
+                    imageCapture[index]=image;
+                    image.close();
+                }
+            },backgroundHandler);
             //setup callback function of device
             cameraManager.openCamera(cameraId, new CameraDevice.StateCallback() {
                 @Override //when called back as open, create preview
                 public void onOpened(CameraDevice cameraDevice) {
                     cameraDevices[index] = cameraDevice;
-                    createCameraPreview(index);//?
+                    createCaptureSession(index);//?
                 }
 
                 @Override //if calls back disconnected, close
@@ -131,6 +152,55 @@ public class ImageCaptureManager {
         }
 
     }
+    private void createCaptureSession(int index)
+    {
+        try {
+            surfaces[index] = imageReaders[index].getSurface();
 
+            captureRequestBuilders[index] = this.cameraDevices[index].createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            captureRequestBuilders[index].addTarget(imageReaders[index].getSurface());
 
+            cameraDevices[index].createCaptureSession( asList(surfaces[index]), new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession session) {
+                    try {
+                        captureSessions[index] = session;
+                        captureRequestBuilders[index].set(CaptureRequest.CONTROL_MODE,CaptureRequest.CONTROL_MODE_AUTO);
+                        captureRequestBuilders[index].set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,new Range<>(FPS,FPS));
+                        captureSessions[index].setRepeatingRequest(captureRequestBuilders[index].build(), null, backgroundHandler);
+                    }catch (CameraAccessException e)
+                    {
+                        e.printStackTrace();
+                    }
+
+                }
+
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+                    //TODO: Handle failed configuration
+                }
+            },backgroundHandler);
+        } catch (CameraAccessException e){
+            e.printStackTrace();
+        }
+
+    }
+    public void closeCamera(int index){
+        if(cameraDevices[index]!=null)
+        {
+            cameraDevices[index].close();
+        }
+        if(captureSessions[index]!=null)
+        {
+            captureSessions[index].close();
+        }
+        if(imageReaders[index]!=null)
+        {
+            imageReaders[index].close;
+        }
+    }
+
+    public Surface[] getSurfaces() {
+        return surfaces;
+    }
 }
