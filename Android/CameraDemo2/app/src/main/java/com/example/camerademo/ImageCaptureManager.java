@@ -85,18 +85,18 @@ public class ImageCaptureManager extends AppCompatActivity {
     //method to take in a needed amount of (lim) camera IDs into a variable, with selection given
     //the lens orientation
     private String[] findIDs(int lim, int lensFacing,CameraCharacteristics cameraCharacteristics_temp)
-    {
+    {   //Method to find a given amount of camera IDs in a given facing(front/back/external) manually by sweeping
         Set<String> idHolder= new HashSet<>(); //variable to hold ids
         int k=0;    //added element counter
         int i=0;    //sweep counter
         try {
             while(k<lim) {
-                //
+                //get Camera characteristics (is it a valid ID?)
                 cameraCharacteristics_temp = cameraManager.getCameraCharacteristics(String.valueOf(i));
-
+                //get lens direction (is it looking where we want it to be?)
                 if(cameraCharacteristics_temp.get(CameraCharacteristics.LENS_FACING)==lensFacing)
                 {
-                    idHolder.add(String.valueOf(i));
+                    idHolder.add(String.valueOf(i));    //add to set of ids
                     k++;
                 }
                 i++;
@@ -106,7 +106,7 @@ public class ImageCaptureManager extends AppCompatActivity {
             e.printStackTrace();
         }
         cameraCharacteristics_temp=null;
-        return idHolder.toArray(new String[0]);
+        return idHolder.toArray(new String[0]); //convert set to array for easier further use
     }
     public void openCamera(String cameraId,int index,TextureView textureView){
         try {//try for opening camera handling permission
@@ -147,6 +147,8 @@ public class ImageCaptureManager extends AppCompatActivity {
             try {
                 SurfaceTexture texture = textureView.getSurfaceTexture();
                 assert texture != null;
+                texture.setDefaultBufferSize(imagesDimensions[index].getWidth(),imagesDimensions[index].getHeight());
+
                 surfaces[index] = new Surface(texture);
 
                 captureRequestBuilders[index] = cameraDevices[index].createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
