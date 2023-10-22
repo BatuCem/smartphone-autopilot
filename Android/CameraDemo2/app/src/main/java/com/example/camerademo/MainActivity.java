@@ -7,6 +7,7 @@ import androidx.core.app.ActivityCompat;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -16,6 +17,7 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.Image;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -25,6 +27,7 @@ import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.TextureView;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.io.File;
@@ -38,7 +41,11 @@ public class MainActivity extends AppCompatActivity {
     ////////////////////////////////DECLARE VARIABLES//////////////////////////////////
     private static final String TAG="AndroidCameraApi";//error handling tag
     private ImageCaptureManager imageCaptureManager;
-    private TextureView[] textureViews;
+    private TextureView[] textureViews=new TextureView[2];
+    private ImageView imageView;
+    private Image[] images;
+    private String[] backCameraIds;
+    private String[] frontCameraIds;
     private static final int REQUEST_CAMERA_PERMISSION = 200;//code for camera permit
 
 
@@ -49,14 +56,62 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         //set up texture view windows
         textureViews[0] = findViewById(R.id.texture);
-        textureViews[1] = findViewById(R.id.texture2);
+        textureViews[1]=findViewById(R.id.texture2);
+
         //ask for necessary permissions (CAMERA)
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
             return;
         }
-        imageCaptureManager=new ImageCaptureManager(this,2,1,15);
-        
+
+        imageCaptureManager=new ImageCaptureManager(getBaseContext(),2,1,15);
+        backCameraIds= imageCaptureManager.getCameraIds(true);
+        frontCameraIds= imageCaptureManager.getCameraIds(false);
+        textureViews[0].setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+            @Override
+            public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
+                imageCaptureManager.openCamera(backCameraIds[0],0,textureViews[0]);
+            }
+
+            @Override
+            public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
+
+            }
+
+            @Override
+            public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
+                return false;
+            }
+
+            @Override
+            public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
+
+            }
+        });
+        textureViews[1].setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+            @Override
+            public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
+                imageCaptureManager.openCamera(backCameraIds[1],1,textureViews[1]);
+            }
+
+            @Override
+            public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
+
+            }
+
+            @Override
+            public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
+                return false;
+            }
+
+            @Override
+            public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
+
+            }
+        });
+
+
+
 
     }
-}
+    }
