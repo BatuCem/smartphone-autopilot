@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
             return;
         }
-        imageCaptureManager = new ImageCaptureManager(getBaseContext(), 2, 1, 1);
+        imageCaptureManager = new ImageCaptureManager(getBaseContext(), 2, 1, 15);
         backCameraIds = imageCaptureManager.getCameraIds(true);
         frontCameraIds = imageCaptureManager.getCameraIds(false);
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
@@ -86,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
-                Bitmap bitmap = textureView.getBitmap();
+                Bitmap bitmap = textureView.getBitmap(3000,4000);
                 if (bitmap != null) {
                 }
 
