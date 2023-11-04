@@ -15,7 +15,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 //Defines Activity where command tx will commence
 public class ButtonActivity extends AppCompatActivity implements View.OnClickListener {
-    private Button[] buttons =new Button[5];              //Define button
+    private Button[] buttons =new Button[5];              //Define button array
 
     Executor executor= Executors.newSingleThreadExecutor(); //get executor to do background tasks
     @Override
