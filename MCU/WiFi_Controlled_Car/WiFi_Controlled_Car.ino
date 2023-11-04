@@ -1,12 +1,12 @@
-#include <WiFi.h>
-#include <WiFiClient.h>
-#include <WiFiAP.h>
+#include <WiFi.h>           // We include the WiFi library.
+#include <WiFiClient.h>     // We include the WiFiClient library.
+#include <WiFiAP.h>         // We include the WiFiAP library.
 
-#define analogWrite ledcWrite
+#define analogWrite ledcWrite  // We define 'ledcWrite' to be used instead of 'analogWrite'.
 
 
 int8_t MAX_PWM = 120;    // Defines and Sets PWM 
-const int FREQ = 5000;     // Defines and Sets Frequency 
+const int FREQ = 1000;     // Defines and Sets Frequency 
 const int RES  = 8;      // Defines and Sets Resoluation 
 
 const int channel_LF = 0; //CH. left-forward
@@ -25,6 +25,16 @@ const char *password = "password";  // Password of Wi-Fi Network
   // a valid password must have more than 7 characters
 
 WiFiServer server(80);   // Sets Port 80 for the web server.
+
+
+
+const int trigger_pin = 35;   // Description of trigger Port for Ultrasonic Sensor
+const int echo_pin    = 34;   // Description of echo Port for Ultrasonic Sensor
+
+int time_1;                   // The time value when we measure the appearance of the echo signal
+int distance;                 // The distance information we will calculate
+
+
 
 void setup() {
  
@@ -53,6 +63,10 @@ void setup() {
   server.begin();                        // Start the server to handle incoming client requests
 
   Serial.println("Server started");      // Print a message indicating that the server has started
+  
+  pinMode(trigger_pin, OUTPUT);          // Set the trigger pin as an output
+  pinMode(echo_pin   , INPUT);           // Set the echo pin as an input
+  
 }
 
 
@@ -100,32 +114,40 @@ void loop() {
         // We send PWM signals to the motors to make the vehicle move forward
         if (currentLine.endsWith("GET /F")) { 
           ledcWrite(channel_LF, MAX_PWM);            // we control the left and right engines to move forward
-          ledcWrite(channel_RF, MAX_PWM);               
+          ledcWrite(channel_RF, MAX_PWM);
+          ledcWrite(channel_LB, 0);            
+          ledcWrite(channel_RB, 0);               
         }
       
 
         // We send PWM signals to the motors to make the vehicle move Back
          if (currentLine.endsWith("GET /B")) {
-          ledcWrite(channel_LB, MAX_PWM);            // we control the left and right engines to move backward
+          ledcWrite(channel_LF, 0);                  // we control the left and right engines to move backward
+          ledcWrite(channel_RF, 0);
+          ledcWrite(channel_LB, MAX_PWM);            
           ledcWrite(channel_RB, MAX_PWM);               
         }
 
         // We send PWM signals to the motors to make the vehicle move Right
         if (currentLine.endsWith("GET /R")) {
-          ledcWrite(channel_RB, MAX_PWM);            // We control the left engine to move forward and the right engine to move backward
-          ledcWrite(channel_LF, MAX_PWM);               
+          ledcWrite(channel_LF, MAX_PWM);           // We control the left engine to move forward and the right engine to move backward
+          ledcWrite(channel_RF, 0);
+          ledcWrite(channel_LB, 0);
+          ledcWrite(channel_RB, MAX_PWM);                         
         }
 
         // We send PWM signals to the motors to make the vehicle move Left
         if (currentLine.endsWith("GET /L")) {
-          ledcWrite(channel_RF, MAX_PWM);         // We control the left engine to move backward and the right engine to move forward
-          ledcWrite(channel_LB, MAX_PWM);               
+          ledcWrite(channel_LF, 0);               // We control the left engine to move backward and the right engine to move forward
+          ledcWrite(channel_RF, MAX_PWM);         
+          ledcWrite(channel_LB, MAX_PWM);
+          ledcWrite(channel_RB, 0);               
         }
 
         // We send PWM signals to the motors to make the vehicle stop
         if (currentLine.endsWith("GET /S")) {
-          ledcWrite(channel_LF, 0);
-          ledcWrite(channel_LB, 0);               // We control the left and right engines to stop
+          ledcWrite(channel_LF, 0);               // We control the left and right engines to stop
+          ledcWrite(channel_LB, 0);               
           ledcWrite(channel_RF, 0);
           ledcWrite(channel_RB, 0);
         }
@@ -136,4 +158,23 @@ void loop() {
     client.stop();
     Serial.println("Client Disconnected.");  // prints the message to disconnect the connection
   }
+
+  digitalWrite(trigger_pin, HIGH);          // Set the trigger pin to HIGH to generate an ultrasonic pulse
+  delayMicroseconds(1000);                  // Keep it HIGH for a short duration
+  digitalWrite(trigger_pin, LOW);           // Turn off the trigger signal
+  time_1   = pulseIn(echo_pin, HIGH);       // Measure the time it takes for the echo signal to return
+  distance = ((time_1 / 2) / 29.1);         // Calculate the distance based on the time measured
+ 
+  Serial.print(" Object distance = ");      // Print the distance to the serial monitor
+  Serial.print(distance);
+  delay(1);
+
+// If the distance measured by the sensor falls below 30 (in our system, 30 cm), it sends a stop command to the motors
+  if ( distance <= 30){
+    ledcWrite(channel_LF, 0);               // We control the left and right engines to stop
+    ledcWrite(channel_LB, 0);               
+    ledcWrite(channel_RF, 0);
+    ledcWrite(channel_RB, 0);
+  }
+  
 }
