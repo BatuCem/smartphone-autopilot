@@ -19,7 +19,23 @@ public class wifiManager {
             return response.body().string();    //return response if exception isn't thrown
         }catch (IOException e)
         {
-            return e.toString();    //return error message when exception is caught
+            return "ConnectionError";    //return error message when exception is caught
         }
+    }
+
+
+    public static boolean isIpValid(String ipAddress)
+    {
+        String response;
+        response = getUrl("http://" + ipAddress);   //check connection test without sending any /url
+        if (response!="ConnectionError") //Valid if error was not thrown
+        {
+            return true;
+        }
+        else    //invalid if error was thrown
+        {
+            return false;
+        }
+
     }
 }
