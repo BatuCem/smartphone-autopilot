@@ -1,9 +1,14 @@
 package com.example.camerademo;
 
 
+import static com.example.camerademo.MainActivity.REQUEST_CAMERA_PERMISSION;
 import static java.util.Arrays.asList;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -27,7 +32,16 @@ import android.view.TextureView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.AspectRatio;
+import androidx.core.app.ActivityCompat;
 
+import com.example.camerademo.ml.LiteModelMidasV21Small1Lite1;
+
+import org.tensorflow.lite.DataType;
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -52,6 +66,7 @@ public class ImageCaptureManager extends AppCompatActivity {
     private Size[] imagesDimensions;
 
     public Image[] imageCapture;
+    String TAG = "ImageCaptureManagement";
 
     public ImageCaptureManager(Context context,int backCams,int frontCams, int FPS)
     {
@@ -114,8 +129,10 @@ public class ImageCaptureManager extends AppCompatActivity {
 
             cameraCharacteristics[index]=cameraManager.getCameraCharacteristics(cameraId);
             imagesDimensions[index]=cameraCharacteristics[index].get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE);
-
-
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+                return;
+            }
             //setup callback function of device
             cameraManager.openCamera(cameraId, new CameraDevice.StateCallback() {
                 @Override //when called back as open, create preview
@@ -146,6 +163,14 @@ public class ImageCaptureManager extends AppCompatActivity {
 
             try {
                 SurfaceTexture texture = textureView.getSurfaceTexture();
+                imageReaders[index]=ImageReader.newInstance(imagesDimensions[index].getWidth(),imagesDimensions[index].getHeight(),ImageFormat.FLEX_RGBA_8888, 2);
+                imageReaders[index].setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
+                    @Override
+                    public void onImageAvailable(ImageReader reader) {
+                        Image image = reader.acquireLatestImage(); //?????
+                        processImage(image);
+                    }
+                },backgroundHandler);
                 assert texture != null;
                 texture.setDefaultBufferSize(imagesDimensions[index].getWidth(),imagesDimensions[index].getHeight());
 
@@ -153,6 +178,8 @@ public class ImageCaptureManager extends AppCompatActivity {
 
                 captureRequestBuilders[index] = cameraDevices[index].createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
                 captureRequestBuilders[index].addTarget(surfaces[index]);
+                captureRequestBuilders[index].addTarget(imageReaders[index].getSurface());
+
 
                 cameraDevices[index].createCaptureSession(asList(surfaces[index]), new CameraCaptureSession.StateCallback() {
                     @Override
@@ -163,7 +190,10 @@ public class ImageCaptureManager extends AppCompatActivity {
                         try {
                             captureSessions[index] = session;
                             captureRequestBuilders[index].set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
-                            captureRequestBuilders[index].set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, new Range<>(FPS, FPS));
+                            if(FPS!=0){
+                                captureRequestBuilders[index].set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, new Range<>(FPS, FPS));
+                            }
+
                             captureSessions[index].setRepeatingRequest(captureRequestBuilders[index].build(), null, backgroundHandler);
 
                         } catch (CameraAccessException e) {
@@ -181,6 +211,24 @@ public class ImageCaptureManager extends AppCompatActivity {
             } catch (CameraAccessException e) {
                 e.printStackTrace();
             }
+    }
+    private void processImage(Image image)
+    {
+        ByteBuffer byteBuffer = image.getPlanes()[0].getBuffer();
+        byte[] bytes = new byte[byteBuffer.capacity()];
+        byteBuffer.get(bytes);
+        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes,0,bytes.length,null);
+
+        try {
+            LiteModelMidasV21Small1Lite1 model = LiteModelMidasV21Small1Lite1.newInstance(context);
+            TensorBuffer inputFeature0 = TensorBuffer.createFixedSize(new int[]{1, 256, 256, 3}, DataType.FLOAT32);
+            inputFeature0.loadBuffer(byteBuffer);
+            LiteModelMidasV21Small1Lite1.Outputs outputs = model.process(inputFeature0);
+            TensorBuffer outputFeature0 = outputs.getOutputFeature0AsTensorBuffer();
+        }catch (IOException e)
+        {
+            Log.e(TAG, "ImageCaptureManager: IOEXCEPTION" );
+        }
     }
     public void closeCamera(int index){
         if(cameraDevices[index]!=null)

@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private Image[] images;
     private String[] backCameraIds;
     private String[] frontCameraIds;
-    private static final int REQUEST_CAMERA_PERMISSION = 200;//code for camera permit
+    public static final int REQUEST_CAMERA_PERMISSION = 200;//code for camera permit
 
 
     @Override
@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
             return;
         }
-        imageCaptureManager = new ImageCaptureManager(getBaseContext(), 2, 1, 15);
+        imageCaptureManager = new ImageCaptureManager(getBaseContext(), 2, 1, 0);
         backCameraIds = imageCaptureManager.getCameraIds(true);
         frontCameraIds = imageCaptureManager.getCameraIds(false);
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
