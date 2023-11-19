@@ -2,6 +2,7 @@ package com.example.camerademo;
 
 
 import static com.example.camerademo.MainActivity.REQUEST_CAMERA_PERMISSION;
+import static com.example.camerademo.MainActivity.imageView;
 import static java.util.Arrays.asList;
 
 import android.Manifest;
@@ -38,6 +39,7 @@ import androidx.core.app.ActivityCompat;
 import com.example.camerademo.ml.LiteModelMidasV21Small1Lite1;
 
 import org.tensorflow.lite.DataType;
+import org.tensorflow.lite.support.image.TensorImage;
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
 
 import java.io.IOException;
@@ -64,8 +66,14 @@ public class ImageCaptureManager extends AppCompatActivity {
     private ImageReader[] imageReaders;
     private Image[] images;
     private Size[] imagesDimensions;
+    private LiteModelMidasV21Small1Lite1 model;
+
+    public long processTime;
+
+    private TensorBuffer inputFeature0;
 
     public Image[] imageCapture;
+    public Bitmap outputBitmap;
     String TAG = "ImageCaptureManagement";
 
     public ImageCaptureManager(Context context,int backCams,int frontCams, int FPS)
@@ -82,6 +90,7 @@ public class ImageCaptureManager extends AppCompatActivity {
         this.captureSessions= new CameraCaptureSession[totalCameras];
         this.surfaces=new Surface[totalCameras];
 
+        this.imageReaders = new ImageReader[totalCameras];
         this.imagesDimensions=new Size[totalCameras];
         this.backCameraIds=findIDs(this.backCams,CameraCharacteristics.LENS_FACING_BACK,this.cameraCharacteristics[0]);
         this.frontCameraIds=findIDs(this.frontCams,CameraCharacteristics.LENS_FACING_FRONT,this.cameraCharacteristics[0]);
@@ -90,6 +99,13 @@ public class ImageCaptureManager extends AppCompatActivity {
         this.handlerThread.start();
         this.backgroundHandler=new Handler(handlerThread.getLooper());
 
+        try{
+             model = LiteModelMidasV21Small1Lite1.newInstance(context);
+             inputFeature0 = TensorBuffer.createFixedSize(new int[]{1, 256, 256, 3}, DataType.FLOAT32);
+        }catch (IOException e)
+        {
+            Log.e(TAG, "ImageCaptureManager: IOEXCEPTION" );
+        }
 
 
 
@@ -128,11 +144,8 @@ public class ImageCaptureManager extends AppCompatActivity {
 
 
             cameraCharacteristics[index]=cameraManager.getCameraCharacteristics(cameraId);
-            imagesDimensions[index]=cameraCharacteristics[index].get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE);
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
-                return;
-            }
+            imagesDimensions[index]=cameraCharacteristics[index].get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(ImageFormat.JPEG)[2]; //possible unsafe usage of HighRes instead of normal sizes
+            imageReaders[index]=ImageReader.newInstance((int) imagesDimensions[index].getWidth(),(int)imagesDimensions[index].getHeight(),ImageFormat.JPEG, 1);
             //setup callback function of device
             cameraManager.openCamera(cameraId, new CameraDevice.StateCallback() {
                 @Override //when called back as open, create preview
@@ -163,25 +176,25 @@ public class ImageCaptureManager extends AppCompatActivity {
 
             try {
                 SurfaceTexture texture = textureView.getSurfaceTexture();
-                imageReaders[index]=ImageReader.newInstance(imagesDimensions[index].getWidth(),imagesDimensions[index].getHeight(),ImageFormat.FLEX_RGBA_8888, 2);
-                imageReaders[index].setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
-                    @Override
-                    public void onImageAvailable(ImageReader reader) {
-                        Image image = reader.acquireLatestImage(); //?????
-                        processImage(image);
-                    }
-                },backgroundHandler);
+
                 assert texture != null;
                 texture.setDefaultBufferSize(imagesDimensions[index].getWidth(),imagesDimensions[index].getHeight());
 
                 surfaces[index] = new Surface(texture);
-
+                imageReaders[index].setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
+                    @Override
+                    public void onImageAvailable(ImageReader reader) {
+                        Image image = reader.acquireLatestImage();
+                        processImage(image);
+                        image.close();
+                    }
+                },backgroundHandler);
                 captureRequestBuilders[index] = cameraDevices[index].createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
                 captureRequestBuilders[index].addTarget(surfaces[index]);
                 captureRequestBuilders[index].addTarget(imageReaders[index].getSurface());
 
 
-                cameraDevices[index].createCaptureSession(asList(surfaces[index]), new CameraCaptureSession.StateCallback() {
+                cameraDevices[index].createCaptureSession(asList(surfaces[index], imageReaders[index].getSurface()), new CameraCaptureSession.StateCallback() {
                     @Override
                     public void onConfigured(@NonNull CameraCaptureSession session) {
                         if (cameraDevices[index] == null) {
@@ -190,9 +203,6 @@ public class ImageCaptureManager extends AppCompatActivity {
                         try {
                             captureSessions[index] = session;
                             captureRequestBuilders[index].set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
-                            if(FPS!=0){
-                                captureRequestBuilders[index].set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, new Range<>(FPS, FPS));
-                            }
 
                             captureSessions[index].setRepeatingRequest(captureRequestBuilders[index].build(), null, backgroundHandler);
 
@@ -214,21 +224,29 @@ public class ImageCaptureManager extends AppCompatActivity {
     }
     private void processImage(Image image)
     {
-        ByteBuffer byteBuffer = image.getPlanes()[0].getBuffer();
+        long startTime=System.currentTimeMillis();  //log starting time
+        ByteBuffer byteBuffer = image.getPlanes()[0].getBuffer();   //convert image to buffer
         byte[] bytes = new byte[byteBuffer.capacity()];
         byteBuffer.get(bytes);
-        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes,0,bytes.length,null);
+        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes,0,bytes.length,null);//convert buffer to bitmap
 
-        try {
-            LiteModelMidasV21Small1Lite1 model = LiteModelMidasV21Small1Lite1.newInstance(context);
-            TensorBuffer inputFeature0 = TensorBuffer.createFixedSize(new int[]{1, 256, 256, 3}, DataType.FLOAT32);
-            inputFeature0.loadBuffer(byteBuffer);
-            LiteModelMidasV21Small1Lite1.Outputs outputs = model.process(inputFeature0);
-            TensorBuffer outputFeature0 = outputs.getOutputFeature0AsTensorBuffer();
-        }catch (IOException e)
-        {
-            Log.e(TAG, "ImageCaptureManager: IOEXCEPTION" );
-        }
+
+        Bitmap input=Bitmap.createScaledBitmap(bitmap,256,256,true);//rescale bitmap to model input
+        TensorImage imageInput = new TensorImage(DataType.FLOAT32); //set data type to model type
+        imageInput.load(input); //load input image
+        ByteBuffer byteBufferInput=imageInput.getBuffer();  //get buffer for input
+        inputFeature0.loadBuffer(byteBufferInput);  //load buffer into model
+        LiteModelMidasV21Small1Lite1.Outputs outputs = model.process(inputFeature0);    //process outputs for model
+        TensorBuffer outputFeature0 = outputs.getOutputFeature0AsTensorBuffer();
+        ByteBuffer outputFeature0Buffer= outputFeature0.getBuffer();    //get outupt buffer
+        outputBitmap=Bitmap.createBitmap(256,256, Bitmap.Config.ARGB_8888); //convert output buffer to bitmap
+        outputFeature0Buffer.rewind();  //reset ctr
+        outputBitmap.copyPixelsFromBuffer(outputFeature0Buffer);    //copy from buffer to image
+
+
+        long stopTime=System.currentTimeMillis();   //read inference time
+        processTime=stopTime-startTime;
+        MainActivity.procTimeView.setText("Model Process Time: "+processTime+" ms");
     }
     public void closeCamera(int index){
         if(cameraDevices[index]!=null)

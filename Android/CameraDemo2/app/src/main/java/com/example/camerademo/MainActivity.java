@@ -27,8 +27,10 @@ import android.util.Range;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.Surface;
+import android.view.SurfaceView;
 import android.view.TextureView;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
@@ -45,10 +47,13 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG="AndroidCameraApi";//error handling tag
     private ImageCaptureManager imageCaptureManager;
     private TextureView textureView;
-    private ImageView imageView;
+    public static TextView procTimeView;
+    public static ImageView imageView;
     private Image[] images;
     private String[] backCameraIds;
     private String[] frontCameraIds;
+    private Handler handler;
+    private HandlerThread handlerThread=new HandlerThread("Main Thread");
     public static final int REQUEST_CAMERA_PERMISSION = 200;//code for camera permit
 
 
@@ -59,6 +64,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         //set up texture view windows
         textureView = findViewById(R.id.textureView);
+        procTimeView=findViewById(R.id.procTimeView);
+        imageView=findViewById(R.id.imageView);
+
+
 
         //ask for necessary permissions (CAMERA)
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -68,6 +77,10 @@ public class MainActivity extends AppCompatActivity {
         imageCaptureManager = new ImageCaptureManager(getBaseContext(), 2, 1, 0);
         backCameraIds = imageCaptureManager.getCameraIds(true);
         frontCameraIds = imageCaptureManager.getCameraIds(false);
+        handlerThread.start();
+        handler= new Handler();
+        setupOutputUpdate();
+
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
             public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
@@ -86,19 +99,24 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
-                Bitmap bitmap = textureView.getBitmap(3000,4000);
-                if (bitmap != null) {
-                }
+
 
             }
+
         });
 
 
 
 
     }
-
-
-
-
+    private void setupOutputUpdate()
+    {
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                imageView.setImageBitmap(imageCaptureManager.outputBitmap);
+                handler.postDelayed(this,100);
+            }
+        },100);
+    }
     }
