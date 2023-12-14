@@ -33,9 +33,14 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.tensorflow.lite.DataType;
+import org.tensorflow.lite.support.image.TensorImage;
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -55,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private Handler handler;
     private HandlerThread handlerThread=new HandlerThread("Main Thread");
     public static final int REQUEST_CAMERA_PERMISSION = 200;//code for camera permit
+    private TensorBuffer inputFeature0;
 
 
     @Override
@@ -79,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
         frontCameraIds = imageCaptureManager.getCameraIds(false);
         handlerThread.start();
         handler= new Handler();
-        setupOutputUpdate();
+        //setupOutputUpdate();
 
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
@@ -99,6 +105,10 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
+
+                Bitmap bitmap = textureView.getBitmap();
+                imageCaptureManager.processImage(bitmap);
+                imageView.setImageBitmap(imageCaptureManager.outputBitmap);
 
 
             }

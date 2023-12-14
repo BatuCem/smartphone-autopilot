@@ -39,6 +39,7 @@ import androidx.core.app.ActivityCompat;
 import com.example.camerademo.ml.LiteModelMidasV21Small1Lite1;
 
 import org.tensorflow.lite.DataType;
+import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.support.image.TensorImage;
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
 
@@ -67,6 +68,7 @@ public class ImageCaptureManager extends AppCompatActivity {
     private Image[] images;
     private Size[] imagesDimensions;
     private LiteModelMidasV21Small1Lite1 model;
+
 
     public long processTime;
 
@@ -185,7 +187,7 @@ public class ImageCaptureManager extends AppCompatActivity {
                     @Override
                     public void onImageAvailable(ImageReader reader) {
                         Image image = reader.acquireLatestImage();
-                        processImage(image);
+                        //processImage(image);
                         image.close();
                     }
                 },backgroundHandler);
@@ -222,13 +224,13 @@ public class ImageCaptureManager extends AppCompatActivity {
                 e.printStackTrace();
             }
     }
-    private void processImage(Image image)
+    public void processImage(Bitmap bitmap)
     {
         long startTime=System.currentTimeMillis();  //log starting time
-        ByteBuffer byteBuffer = image.getPlanes()[0].getBuffer();   //convert image to buffer
-        byte[] bytes = new byte[byteBuffer.capacity()];
-        byteBuffer.get(bytes);
-        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes,0,bytes.length,null);//convert buffer to bitmap
+        //ByteBuffer byteBuffer = image.getPlanes()[0].getBuffer();   //convert image to buffer
+        //byte[] bytes = new byte[byteBuffer.capacity()];
+        //byteBuffer.get(bytes);
+        //Bitmap bitmap = BitmapFactory.decodeByteArray(bytes,0,bytes.length,null);//convert buffer to bitmap
 
 
         Bitmap input=Bitmap.createScaledBitmap(bitmap,256,256,true);//rescale bitmap to model input
