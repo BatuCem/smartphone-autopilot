@@ -67,12 +67,9 @@ public class ImageCaptureManager extends AppCompatActivity {
     private ImageReader[] imageReaders;
     private Image[] images;
     private Size[] imagesDimensions;
-    private LiteModelMidasV21Small1Lite1 model;
 
 
     public long processTime;
-
-    private TensorBuffer inputFeature0;
 
     public Image[] imageCapture;
     public Bitmap outputBitmap;
@@ -100,14 +97,6 @@ public class ImageCaptureManager extends AppCompatActivity {
         this.handlerThread= new HandlerThread("CameraBackground");
         this.handlerThread.start();
         this.backgroundHandler=new Handler(handlerThread.getLooper());
-
-        try{
-             model = LiteModelMidasV21Small1Lite1.newInstance(context);
-             inputFeature0 = TensorBuffer.createFixedSize(new int[]{1, 256, 256, 3}, DataType.FLOAT32);
-        }catch (IOException e)
-        {
-            Log.e(TAG, "ImageCaptureManager: IOEXCEPTION" );
-        }
 
 
 
@@ -223,32 +212,6 @@ public class ImageCaptureManager extends AppCompatActivity {
             } catch (CameraAccessException e) {
                 e.printStackTrace();
             }
-    }
-    public void processImage(Bitmap bitmap)
-    {
-        long startTime=System.currentTimeMillis();  //log starting time
-        //ByteBuffer byteBuffer = image.getPlanes()[0].getBuffer();   //convert image to buffer
-        //byte[] bytes = new byte[byteBuffer.capacity()];
-        //byteBuffer.get(bytes);
-        //Bitmap bitmap = BitmapFactory.decodeByteArray(bytes,0,bytes.length,null);//convert buffer to bitmap
-
-
-        Bitmap input=Bitmap.createScaledBitmap(bitmap,256,256,true);//rescale bitmap to model input
-        TensorImage imageInput = new TensorImage(DataType.FLOAT32); //set data type to model type
-        imageInput.load(input); //load input image
-        ByteBuffer byteBufferInput=imageInput.getBuffer();  //get buffer for input
-        inputFeature0.loadBuffer(byteBufferInput);  //load buffer into model
-        LiteModelMidasV21Small1Lite1.Outputs outputs = model.process(inputFeature0);    //process outputs for model
-        TensorBuffer outputFeature0 = outputs.getOutputFeature0AsTensorBuffer();
-        ByteBuffer outputFeature0Buffer= outputFeature0.getBuffer();    //get outupt buffer
-        outputBitmap=Bitmap.createBitmap(256,256, Bitmap.Config.ARGB_8888); //convert output buffer to bitmap
-        outputFeature0Buffer.rewind();  //reset ctr
-        outputBitmap.copyPixelsFromBuffer(outputFeature0Buffer);    //copy from buffer to image
-
-
-        long stopTime=System.currentTimeMillis();   //read inference time
-        processTime=stopTime-startTime;
-        MainActivity.procTimeView.setText("Model Process Time: "+processTime+" ms");
     }
     public void closeCamera(int index){
         if(cameraDevices[index]!=null)

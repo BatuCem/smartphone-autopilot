@@ -51,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
     ////////////////////////////////DECLARE VARIABLES//////////////////////////////////
     private static final String TAG="AndroidCameraApi";//error handling tag
     private ImageCaptureManager imageCaptureManager;
+    private DepthEstimationModel depthEstimationModel;
     private TextureView textureView;
     public static TextView procTimeView;
     public static ImageView imageView;
@@ -85,7 +86,12 @@ public class MainActivity extends AppCompatActivity {
         frontCameraIds = imageCaptureManager.getCameraIds(false);
         handlerThread.start();
         handler= new Handler();
-        //setupOutputUpdate();
+        try {
+            depthEstimationModel = new DepthEstimationModel(this, 4);
+        } catch(IOException e)
+        {
+            Log.e(TAG, "onCreate: IOEX_depthEst" );
+        }
 
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
@@ -107,8 +113,9 @@ public class MainActivity extends AppCompatActivity {
             public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
 
                 Bitmap bitmap = textureView.getBitmap();
-                imageCaptureManager.processImage(bitmap);
-                imageView.setImageBitmap(imageCaptureManager.outputBitmap);
+                //imageCaptureManager.processImage(bitmap);
+
+                imageView.setImageBitmap(depthEstimationModel.runInference(bitmap));
 
 
             }
@@ -118,15 +125,5 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-    }
-    private void setupOutputUpdate()
-    {
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                imageView.setImageBitmap(imageCaptureManager.outputBitmap);
-                handler.postDelayed(this,100);
-            }
-        },100);
     }
     }
