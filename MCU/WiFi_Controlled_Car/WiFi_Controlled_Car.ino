@@ -6,7 +6,6 @@
 #define analogWrite ledcWrite  // We define 'ledcWrite' to be used instead of 'analogWrite'.
 
 
-int8_t MAX_PWM = 120;    // Defines and Sets PWM 
 const int FREQ = 1000;     // Defines and Sets Frequency 
 const int RES  = 8;      // Defines and Sets Resoluation 
 
