@@ -4,7 +4,15 @@ import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 
+
+import org.tensorflow.lite.DataType;
 import org.tensorflow.lite.Interpreter;
+import org.tensorflow.lite.support.common.ops.NormalizeOp;
+import org.tensorflow.lite.support.image.ImageProcessor;
+import org.tensorflow.lite.support.image.TensorImage;
+import org.tensorflow.lite.support.image.ops.ResizeOp;
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
+import org.tensorflow.lite.support.tensorbuffer.TensorBufferFloat;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -14,7 +22,9 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 public class DepthEstimationModel {
+
     private Interpreter tfliteInterpreter;
+    private int imgDim =128;
     public DepthEstimationModel (Context context, int numThreads) throws IOException{
         Interpreter.Options options = new Interpreter.Options();
         options.setNumThreads(numThreads);
@@ -22,37 +32,28 @@ public class DepthEstimationModel {
     }
 
     private MappedByteBuffer loadModelFile(Context context) throws IOException {
-        AssetFileDescriptor fileDescriptor = context.getAssets().openFd("midas.tflite");
+        AssetFileDescriptor fileDescriptor = context.getAssets().openFd("1.tflite");
         FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
         FileChannel fileChannel = inputStream.getChannel();
         long startOffset = fileDescriptor.getStartOffset();
         long declaredLength = fileDescriptor.getDeclaredLength();
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
     }
+    private ImageProcessor inputTensorProcessor = new ImageProcessor.Builder()
+            .add(new ResizeOp(imgDim,imgDim, ResizeOp.ResizeMethod.BILINEAR))
+            .add(new NormalizeOp(new float[] {123.675f ,  116.28f ,  103.53f}, new float[] {58.395f , 57.12f ,  57.375f}))
+            .build();
     public Bitmap runInference(Bitmap bitmap)
     {
-        tfliteInterpreter.inp
-        ByteBuffer inputBuffer = preShape(bitmap);
-        float[][][]depthOutput = new float[1][256][256];
-        tfliteInterpreter.run(inputBuffer,depthOutput);
-        return postShape(depthOutput[0]);
+        long tInit= System.currentTimeMillis();
+        TensorImage inputTensor = TensorImage.fromBitmap(bitmap);
+        inputTensor=inputTensorProcessor.process(inputTensor);
+        TensorBuffer outputTensor = TensorBufferFloat.createFixedSize(new int[] {imgDim,imgDim,1},DataType.FLOAT32);
+        tfliteInterpreter.run(inputTensor.getBuffer(),outputTensor.getBuffer());
+        long tFinal= System.currentTimeMillis();
+        MainActivity.procTimeView.setText("Model Process Time" + Long.toString(tFinal-tInit) +"ms");
+        return postShape(outputTensor.getFloatArray());
 
-    }
-    private ByteBuffer preShape(Bitmap bitmap)
-    {
-        ByteBuffer byteBuffer;
-        byteBuffer = ByteBuffer.allocateDirect(4*256*256*3);
-        byteBuffer.order(ByteOrder.nativeOrder());
-        Bitmap resizedBmp = Bitmap.createScaledBitmap(bitmap,256,256,false);
-        int[] intValues = new int[256 * 256];
-        resizedBmp.getPixels(intValues, 0, resizedBmp.getWidth(), 0, 0, resizedBmp.getWidth(), resizedBmp.getHeight());
-
-        for (int value : intValues) {
-            byteBuffer.putFloat(((value >> 16) & 0xFF) / 255.0f);
-            byteBuffer.putFloat(((value >> 8) & 0xFF) / 255.0f);
-            byteBuffer.putFloat((value & 0xFF) / 255.0f);
-        }
-        return byteBuffer;
     }
     private Bitmap postShape (float[] outData)
     {
@@ -60,10 +61,10 @@ public class DepthEstimationModel {
         for (int i = 0; i < outData.length; i++) {
             normalizedDepth[i] = 255 * (outData[i]); //assume num from 0 to 1 to 0 to 255
         }
-        Bitmap bitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_8888);
-        for (int y = 0; y < 256; y++) {
-            for (int x = 0; x < 256; x++) {
-                int depthValue = (int) normalizedDepth[y * 256 + x];
+        Bitmap bitmap = Bitmap.createBitmap(imgDim, imgDim, Bitmap.Config.ARGB_8888);
+        for (int y = 0; y < imgDim; y++) {
+            for (int x = 0; x < imgDim; x++) {
+                int depthValue = (int) normalizedDepth[y * imgDim + x];
                 int pixel = 0xFF000000 | (depthValue << 16) | (depthValue << 8) | depthValue; // Gray scale
                 bitmap.setPixel(x, y, pixel);
             }

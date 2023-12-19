@@ -92,7 +92,7 @@ public class ButtonActivity extends AppCompatActivity {
     {
         String aStr = (a >= 0 ? "+" : "-") + String.format("%03d", Math.abs(a));
         String bStr = (b >= 0 ? "+" : "-") + String.format("%03d", Math.abs(b));
-        return aStr + " " + bStr;
+        return aStr + bStr;
     }
 
 }
