@@ -1,8 +1,5 @@
 package com.example.wifihttpokdemo;
 
-import android.content.Context;
-import android.widget.Toast;
-
 import java.io.IOException;
 
 import okhttp3.OkHttpClient;

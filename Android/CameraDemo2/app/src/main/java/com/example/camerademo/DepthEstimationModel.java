@@ -32,7 +32,7 @@ public class DepthEstimationModel {
     public Bitmap runInference(Bitmap bitmap)
     {
         tfliteInterpreter.inp
-        ByteBuffer inputBuffer= preShape(bitmap);
+        ByteBuffer inputBuffer = preShape(bitmap);
         float[][][]depthOutput = new float[1][256][256];
         tfliteInterpreter.run(inputBuffer,depthOutput);
         return postShape(depthOutput[0]);

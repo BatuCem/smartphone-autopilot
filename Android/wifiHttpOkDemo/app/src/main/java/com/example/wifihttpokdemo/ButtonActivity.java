@@ -3,35 +3,73 @@ package com.example.wifihttpokdemo;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.SeekBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-//Defines Activity where command tx will commence
-public class ButtonActivity extends AppCompatActivity implements View.OnClickListener {
-    private Button[] buttons =new Button[5];              //Define button array
 
-    Executor executor= Executors.newSingleThreadExecutor(); //get executor to do background tasks
+public class ButtonActivity extends AppCompatActivity {
+    private SeekBar seekBarL, seekBarR;
+    private TextView textL,textR;
+    private int leftState,rightState;
+    Executor executor = Executors.newSingleThreadExecutor();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_button);   //connect layout with XML
-        buttons[0]=findViewById(R.id.forwardButton);     //connect forward button in layout
-        buttons[1]=findViewById(R.id.backwardButton);   //connect backward move button in layout
-        buttons[2]=findViewById(R.id.rightButton);      //connect turn right button in layout
-        buttons[3]=findViewById(R.id.leftButton);       //connect turn left button in layout
-        buttons[4]=findViewById(R.id.stopButton);       //connect stop button in layout
+        setContentView(R.layout.activity_button);
+        seekBarL=findViewById(R.id.seekBarL);
+        seekBarR=findViewById(R.id.seekBarR);
+        textL=findViewById(R.id.textViewL);
+        textR=findViewById(R.id.textViewR);
+        seekBarL.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                leftState=progress;
+                requestToUrl(convertIntegers(leftState,rightState));
+                textL.setText(Integer.toString(leftState));
 
-        for(int i=0;i<buttons.length;i++)
-        {
-            buttons[i].setOnClickListener(this);
-        }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+        seekBarR.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                rightState=progress;
+                requestToUrl(convertIntegers(leftState,rightState));
+                textR.setText(Integer.toString(rightState));
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
+
     }
     void requestToUrl(String command){      //make request from given command
         ConnectivityManager connectivityManager= (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);  //Get Connectivity Service
@@ -50,35 +88,11 @@ public class ButtonActivity extends AppCompatActivity implements View.OnClickLis
             Toast.makeText(ButtonActivity.this, "Device Not Connected!", Toast.LENGTH_SHORT).show();    //give connection error via pop-up toast
         }
     }
-
-    @Override
-    public void onClick(View v) {
-        requestToUrl("S");
-        final int viewId = v.getId();
-        if(viewId ==R.id.forwardButton)
-        {
-            requestToUrl("F");
-            Toast.makeText(this, "moving forward", Toast.LENGTH_SHORT).show();
-        }
-        else if (viewId==R.id.backwardButton)
-        {
-            requestToUrl("B");
-            Toast.makeText(this, "moving backward", Toast.LENGTH_SHORT).show();
-        }
-        else if (viewId==R.id.rightButton)
-        {
-            requestToUrl("R");
-            Toast.makeText(this, "turning right", Toast.LENGTH_SHORT).show();
-        }
-        else if (viewId==R.id.leftButton)
-        {
-            requestToUrl("L");
-            Toast.makeText(this, "turning left", Toast.LENGTH_SHORT).show();
-        }
-        else {
-            //Do nothing for now, just report stop
-            Toast.makeText(this, "stopping", Toast.LENGTH_SHORT).show();
-        }
-
+    public static String convertIntegers (int a, int b)
+    {
+        String aStr = (a >= 0 ? "+" : "-") + String.format("%03d", Math.abs(a));
+        String bStr = (b >= 0 ? "+" : "-") + String.format("%03d", Math.abs(b));
+        return aStr + " " + bStr;
     }
+
 }

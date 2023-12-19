@@ -6,40 +6,33 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+
+    <SeekBar
+        android:id="@+id/seekBarL"
+        style="@style/Widget.AppCompat.SeekBar.Discrete"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="255"
+        android:min="-255" />
+
     <TextView
-        android:id="@+id/buttonTitleView"
+        android:id="@+id/textViewL"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Buttons Setup" />
+        android:text="TextView" />
 
-    <Button
-        android:id="@+id/forwardButton"
+    <SeekBar
+        android:id="@+id/seekBarR"
+        style="@style/Widget.AppCompat.SeekBar.Discrete"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Move Forward" />
+        android:max="255"
+        android:min="-255" />
 
-    <Button
-        android:id="@+id/backwardButton"
+    <TextView
+        android:id="@+id/textViewR"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Move Backward" />
-
-    <Button
-        android:id="@+id/rightButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Turn Right" />
-
-    <Button
-        android:id="@+id/leftButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Turn Left" />
-
-    <Button
-        android:id="@+id/stopButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Stop" />
+        android:text="TextView" />
 
 </LinearLayout>

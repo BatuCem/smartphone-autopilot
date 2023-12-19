@@ -7,25 +7,24 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.Toast;
 
 public class ipActivity extends AppCompatActivity {
 
-    private Button enterIp;//define button to check ip entry
-    private EditText ipInput;//define text edit space default by the given ESP32 IP:192.168.4.1
-    public static String ipAddress;//externally accessible ip address taken in this context, used in other activities
+    private Button enterIp;
+    private EditText ipInput;
+    public static String ipAddress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_ip);   //connect to activity XML
-        ipInput=(EditText) findViewById(R.id.ipInput);  //connect text field in layout and variable
-        enterIp=(Button) findViewById(R.id.enterButton);//connect button in layout and definition
-        enterIp.setOnClickListener(new View.OnClickListener() { //Set listener on button
+        setContentView(R.layout.activity_ip);
+        ipInput=(EditText) findViewById(R.id.ipInput);
+        enterIp=(Button) findViewById(R.id.enterButton);
+        enterIp.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {   //do on each click
-                ipAddress=ipInput.getText().toString(); //get string from text field
-                Intent intent=new Intent(ipActivity.this,ButtonActivity.class); //switch to next activity
+            public void onClick(View v) {
+                ipAddress=ipInput.getText().toString();
+                Intent intent=new Intent(ipActivity.this,ButtonActivity.class);
                 startActivity(intent);
             }
         });
