@@ -20,6 +20,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.HashMap;
+import java.util.Map;
 
 public class DepthEstimationModel {
 
@@ -54,6 +56,25 @@ public class DepthEstimationModel {
         MainActivity.procTimeView.setText("Model Process Time" + Long.toString(tFinal-tInit) +"ms");
         return postShape(outputTensor.getFloatArray());
 
+    }
+    public void detectObjects(Bitmap bitmap)
+    {
+        long tInit= System.currentTimeMillis();
+        TensorImage inputTensor = TensorImage.fromBitmap(bitmap);
+        inputTensor=inputTensorProcessor.process(inputTensor);
+        int NUM_DETECTIONS=3;
+        float[][][] outputLocations = new float[1][NUM_DETECTIONS][4]; // Bounding box coordinates
+        float[][] outputClasses = new float[1][NUM_DETECTIONS];        // Detection classes
+        float[][] outputScores = new float[1][NUM_DETECTIONS];         // Confidence scores
+        float[] numDetections = new float[1];                          // Number of detections
+        Map<Integer, Object> outputMap = new HashMap<>();
+        outputMap.put(0, outputLocations);
+        outputMap.put(1, outputClasses);
+        outputMap.put(2, outputScores);
+        outputMap.put(3, numDetections);
+        tfliteInterpreter.runForMultipleInputsOutputs(new Object[]{inputTensor.getBuffer()},outputMap);
+        long tFinal= System.currentTimeMillis();
+        MainActivity.procTimeView.setText("Model Process Time" + Long.toString(tFinal-tInit) +"ms");
     }
     private Bitmap postShape (float[] outData)
     {

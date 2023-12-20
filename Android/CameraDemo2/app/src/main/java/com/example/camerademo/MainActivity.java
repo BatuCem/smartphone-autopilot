@@ -114,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
 
                 Bitmap bitmap = textureView.getBitmap();
                 //imageCaptureManager.processImage(bitmap);
-
+                depthEstimationModel.detectObjects(bitmap);
                 imageView.setImageBitmap(depthEstimationModel.runInference(bitmap));
 
 
