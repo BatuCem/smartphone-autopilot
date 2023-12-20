@@ -1,11 +1,11 @@
 #include <WiFi.h>           // We include the WiFi library.
 #include <WiFiClient.h>     // We include the WiFiClient library.
 #include <WiFiAP.h>         // We include the WiFiAP library.
+#include <string.h>
 
 #define analogWrite ledcWrite  // We define 'ledcWrite' to be used instead of 'analogWrite'.
 
 
-int8_t MAX_PWM = 120;    // Defines and Sets PWM 
 const int FREQ = 1000;     // Defines and Sets Frequency 
 const int RES  = 8;      // Defines and Sets Resoluation 
 
@@ -14,10 +14,11 @@ const int channel_LB = 1; //CH. left-backward
 const int channel_RF = 2; //CH. right-forward
 const int channel_RB = 3; //CH. right-backward
 
-const int left_FW  = 13;  // Description of Left-Forward Port
-const int left_BW  = 12;  // Description of Left-Backward Port
-const int right_FW = 27;  // Description of Right-Forward Port
-const int right_BW = 33;  // Description of Right-Backward Port
+const int left_FW  = 33;  // Description of Left-Forward Port
+const int left_BW  = 27;  // Description of Left-Backward Port
+const int right_FW = 12;  // Description of Right-Forward Port
+const int right_BW = 13;  // Description of Right-Backward Port
+
 
 const char *ssid     = "ESP-32";    // Name of Wi-Fi Network
 const char *password = "password";  // Password of Wi-Fi Network
@@ -26,15 +27,10 @@ const char *password = "password";  // Password of Wi-Fi Network
 
 WiFiServer server(80);   // Sets Port 80 for the web server.
 
+int sliderValue1 = 0; // İlk kaydırıcının değeri için değişken
+int sliderValue2 = 0; // İkinci kaydırıcının değeri için değişken
 
-
-const int trigger_pin = 35;   // Description of trigger Port for Ultrasonic Sensor
-const int echo_pin    = 34;   // Description of echo Port for Ultrasonic Sensor
-
-int time_1;                   // The time value when we measure the appearance of the echo signal
-int distance;                 // The distance information we will calculate
-
-
+int speeds[] = {0,0};
 
 void setup() {
  
@@ -64,9 +60,6 @@ void setup() {
 
   Serial.println("Server started");      // Print a message indicating that the server has started
   
-  pinMode(trigger_pin, OUTPUT);          // Set the trigger pin as an output
-  pinMode(echo_pin   , INPUT);           // Set the echo pin as an input
-  
 }
 
 
@@ -75,106 +68,81 @@ void loop() {
   
   WiFiClient client = server.available();   // listen for incoming clients
 
-  if (client) {                             // if you get a client,
-    Serial.println("New Client.");          // print a message out the serial port
-    String currentLine = "";                // make a String to hold incoming data from the client
-    while (client.connected()) {            // loop while the client's connected
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out the serial monitor
-        if (c == '\n') {                    // if the byte is a newline character
+  if (client) {
+    String command = client.readStringUntil('\n');
+    client.flush();
+    Serial.println(command); 
+    
+    if (command.startsWith("GET /")) {
+        int firstSlashIndex = command.indexOf('/'); // İlk eğik çizginin konumunu bul
+        int secondSlashIndex = command.indexOf('/', firstSlashIndex + 1); // İkinci eğik çizginin konumunu bul
+        
+        if (firstSlashIndex != -1 && secondSlashIndex != -1) {
+            String values = command.substring(firstSlashIndex + 1, secondSlashIndex); // İki değer arasındaki kısmı al
+            
+            String firstValue = values.substring(0, 4); // İlk 4 haneli değeri al
+            String secondValue = values.substring(4, 8); // Sonraki 4 haneli değeri al
+            
+            int sliderValue1 = firstValue.toInt(); // İlk değeri tamsayıya dönüştür
+            int sliderValue2 = secondValue.toInt(); // İkinci değeri tamsayıya dönüştür
+            
+            Serial.print("value1=");
+            Serial.println(sliderValue1); // İlk değeri seri porta yazdır
+            Serial.print("value2=");
+            Serial.println(sliderValue2); // İkinci değeri seri porta yazdır
 
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
-          if (currentLine.length() == 0) {
-            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-            // and a content-type so the client knows what's coming, then a blank line:
-            client.println("HTTP/1.1 200 OK");             
-            client.println("Content-type:text/html");
-            client.println();
+            speeds[0] = sliderValue1;
+            speeds[1] = sliderValue2;
+            Serial.println(speeds[0]); 
+            Serial.println(speeds[1]); 
 
-           // Sends us commands by adding a message and a button to the web browser
-            client.print("Click <a href=\"/F\">here</a> to go Forward.<br>");   
-            client.print("Click <a href=\"/B\">here</a> to go Back.<br>");      
-            client.print("Click <a href=\"/R\">here</a> to go Right.<br>");
-            client.print("Click <a href=\"/L\">here</a> to go Left.<br>");
-            client.print("Click <a href=\"/S\">here</a> to Stop.<br>");
-
-            // The HTTP response ends with another blank line:
-            client.println();
-            // break out of the while loop:
-            break;
-          } else {    // if you got a newline, then clear currentLine:
-            currentLine = "";
-          }
-        } else if (c != '\r') {  // if you got anything else but a carriage return character,
-          currentLine += c;      // add it to the end of the currentLine
+            Drive(speeds);
         }
+    }
+  }
+}
+  
 
+void Drive (int speeds[]){
         // We send PWM signals to the motors to make the vehicle move forward
-        if (currentLine.endsWith("GET /F")) { 
-          ledcWrite(channel_LF, MAX_PWM);            // we control the left and right engines to move forward
-          ledcWrite(channel_RF, MAX_PWM);
+        if ((speeds[0] >= 0) && (speeds[1] >= 0)){ 
+          ledcWrite(channel_LF, abs(speeds[0]));            // we control the left and right engines to move forward
+          ledcWrite(channel_RF, abs(speeds[1]));
           ledcWrite(channel_LB, 0);            
           ledcWrite(channel_RB, 0);               
         }
-      
+        
 
         // We send PWM signals to the motors to make the vehicle move Back
-         if (currentLine.endsWith("GET /B")) {
+         if ((speeds[0] < 0) && (speeds[1] < 0)) {
           ledcWrite(channel_LF, 0);                  // we control the left and right engines to move backward
           ledcWrite(channel_RF, 0);
-          ledcWrite(channel_LB, MAX_PWM);            
-          ledcWrite(channel_RB, MAX_PWM);               
+          ledcWrite(channel_LB, abs(speeds[0]));            
+          ledcWrite(channel_RB, abs(speeds[1]));               
         }
 
         // We send PWM signals to the motors to make the vehicle move Right
-        if (currentLine.endsWith("GET /R")) {
-          ledcWrite(channel_LF, MAX_PWM);           // We control the left engine to move forward and the right engine to move backward
+        if ((speeds[0] >= 0) && (speeds[1] < 0)) {
+          ledcWrite(channel_LF, abs(speeds[0]));           // We control the left engine to move forward and the right engine to move backward
           ledcWrite(channel_RF, 0);
           ledcWrite(channel_LB, 0);
-          ledcWrite(channel_RB, MAX_PWM);                         
+          ledcWrite(channel_RB, abs(speeds[1]));                         
         }
 
         // We send PWM signals to the motors to make the vehicle move Left
-        if (currentLine.endsWith("GET /L")) {
+        if ((speeds[0] < 0) && (speeds[1] >= 0)) {
           ledcWrite(channel_LF, 0);               // We control the left engine to move backward and the right engine to move forward
-          ledcWrite(channel_RF, MAX_PWM);         
-          ledcWrite(channel_LB, MAX_PWM);
+          ledcWrite(channel_RF, abs(speeds[1]));         
+          ledcWrite(channel_LB, abs(speeds[0]));
           ledcWrite(channel_RB, 0);               
         }
 
         // We send PWM signals to the motors to make the vehicle stop
-        if (currentLine.endsWith("GET /S")) {
+        if ((speeds[0] == 0) && (speeds[1] == 0)) {
           ledcWrite(channel_LF, 0);               // We control the left and right engines to stop
           ledcWrite(channel_LB, 0);               
           ledcWrite(channel_RF, 0);
           ledcWrite(channel_RB, 0);
         }
 
-      }
-    }
-    // close the connection:
-    client.stop();
-    Serial.println("Client Disconnected.");  // prints the message to disconnect the connection
-  }
-
-  digitalWrite(trigger_pin, HIGH);          // Set the trigger pin to HIGH to generate an ultrasonic pulse
-  delayMicroseconds(1000);                  // Keep it HIGH for a short duration
-  digitalWrite(trigger_pin, LOW);           // Turn off the trigger signal
-  time_1   = pulseIn(echo_pin, HIGH);       // Measure the time it takes for the echo signal to return
-  distance = ((time_1 / 2) / 29.1);         // Calculate the distance based on the time measured
- 
-  Serial.print(" Object distance = ");      // Print the distance to the serial monitor
-  Serial.print(distance);
-  delay(1);
-
-// If the distance measured by the sensor falls below 30 (in our system, 30 cm), it sends a stop command to the motors
-  if ( distance <= 30){
-    ledcWrite(channel_LF, 0);               // We control the left and right engines to stop
-    ledcWrite(channel_LB, 0);               
-    ledcWrite(channel_RF, 0);
-    ledcWrite(channel_RB, 0);
-  }
-  
 }
