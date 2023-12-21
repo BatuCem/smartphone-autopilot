@@ -8,6 +8,11 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -61,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
     private Handler handler;
     private HandlerThread handlerThread=new HandlerThread("Main Thread");
     public static final int REQUEST_CAMERA_PERMISSION = 200;//code for camera permit
-    private TensorBuffer inputFeature0;
+    private Paint paint;
 
 
     @Override
@@ -115,7 +120,21 @@ public class MainActivity extends AppCompatActivity {
                 Bitmap bitmap = textureView.getBitmap();
                 //imageCaptureManager.processImage(bitmap);
                 depthEstimationModel.detectObjects(bitmap);
-                imageView.setImageBitmap(depthEstimationModel.runInference(bitmap));
+                Bitmap mutable = bitmap.copy(Bitmap.Config.ARGB_8888,true);
+                //imageView.setImageBitmap(depthEstimationModel.runInference(bitmap));
+                Canvas canvas = new Canvas(mutable);
+                paint.setTextSize(mutable.getHeight()/15f);
+                paint.setStrokeWidth(mutable.getHeight()/85f);
+                paint.setColor(Color.RED);
+                for(int i=0;i<10;i++)
+                {
+                    if(((float [][]) depthEstimationModel.outputMap.get(2))[0][i]>=0.5)//check scores
+                    {
+                        paint.setStyle(Paint.Style.STROKE);
+                        float[4] rectArray = depthEstimationModel.outputMap.get(0)[0][i];
+                    }
+                }
+
 
 
             }

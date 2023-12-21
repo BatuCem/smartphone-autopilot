@@ -11,26 +11,32 @@ import org.tensorflow.lite.support.common.ops.NormalizeOp;
 import org.tensorflow.lite.support.image.ImageProcessor;
 import org.tensorflow.lite.support.image.TensorImage;
 import org.tensorflow.lite.support.image.ops.ResizeOp;
+import org.tensorflow.lite.support.metadata.MetadataExtractor;
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
 import org.tensorflow.lite.support.tensorbuffer.TensorBufferFloat;
 
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 public class DepthEstimationModel {
 
     private Interpreter tfliteInterpreter;
-    private int imgDim =128;
+    public Map<Integer, Object> outputMap = new HashMap<>();
+    private int imgDim =300;
     public DepthEstimationModel (Context context, int numThreads) throws IOException{
         Interpreter.Options options = new Interpreter.Options();
         options.setNumThreads(numThreads);
-        tfliteInterpreter= new Interpreter(loadModelFile(context),options);
+        MappedByteBuffer modelFile=loadModelFile(context);
+        tfliteInterpreter= new Interpreter(modelFile,options);
     }
 
     private MappedByteBuffer loadModelFile(Context context) throws IOException {
@@ -43,7 +49,7 @@ public class DepthEstimationModel {
     }
     private ImageProcessor inputTensorProcessor = new ImageProcessor.Builder()
             .add(new ResizeOp(imgDim,imgDim, ResizeOp.ResizeMethod.BILINEAR))
-            .add(new NormalizeOp(new float[] {123.675f ,  116.28f ,  103.53f}, new float[] {58.395f , 57.12f ,  57.375f}))
+            //.add(new NormalizeOp(new float[] {123.675f ,  116.28f ,  103.53f}, new float[] {58.395f , 57.12f ,  57.375f}))
             .build();
     public Bitmap runInference(Bitmap bitmap)
     {
@@ -62,12 +68,12 @@ public class DepthEstimationModel {
         long tInit= System.currentTimeMillis();
         TensorImage inputTensor = TensorImage.fromBitmap(bitmap);
         inputTensor=inputTensorProcessor.process(inputTensor);
-        int NUM_DETECTIONS=3;
+        int NUM_DETECTIONS=10;
         float[][][] outputLocations = new float[1][NUM_DETECTIONS][4]; // Bounding box coordinates
         float[][] outputClasses = new float[1][NUM_DETECTIONS];        // Detection classes
         float[][] outputScores = new float[1][NUM_DETECTIONS];         // Confidence scores
         float[] numDetections = new float[1];                          // Number of detections
-        Map<Integer, Object> outputMap = new HashMap<>();
+
         outputMap.put(0, outputLocations);
         outputMap.put(1, outputClasses);
         outputMap.put(2, outputScores);
