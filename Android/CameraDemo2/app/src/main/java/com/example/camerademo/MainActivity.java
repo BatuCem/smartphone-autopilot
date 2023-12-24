@@ -23,6 +23,9 @@ import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -50,6 +53,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 
 //Main Class
@@ -69,6 +74,22 @@ public class MainActivity extends AppCompatActivity {
     public static final int REQUEST_CAMERA_PERMISSION = 200;//code for camera permit
     private Paint paint;
     private String[] labels;
+    private Executor executor = Executors.newSingleThreadExecutor();
+    private Handler systemHandler = new Handler();
+    private Runnable systemRunnable = new Runnable() {
+        @Override
+        public void run() {
+            int[] commands = new int[2];
+            commands=inferWifiCommands(200,1);
+            requestToUrl(wifiManager.commandIntegers(commands[0],commands[1]));
+
+            systemHandler.postDelayed(systemRunnable,100);
+        }
+    };
+    private float rectXCenter;
+    private boolean areaInit=false;
+    private float rectArea;
+    private float rectAreaRef;
 
 
     @Override
@@ -105,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
             public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
-                imageCaptureManager.openCamera(backCameraIds[0], 0, textureView);
+                imageCaptureManager.openCamera(frontCameraIds[0], 0, textureView);
             }
 
             @Override
@@ -124,36 +145,82 @@ public class MainActivity extends AppCompatActivity {
                 Bitmap bitmap = textureView.getBitmap();
                 //imageCaptureManager.processImage(bitmap);
                 depthEstimationModel.detectObjects(bitmap);
-                Bitmap mutable = bitmap.copy(Bitmap.Config.ARGB_8888,true);
-                //imageView.setImageBitmap(depthEstimationModel.runInference(bitmap));
-                Canvas canvas = new Canvas(mutable);
-                paint.setTextSize(mutable.getHeight()/15f);
-                paint.setStrokeWidth(mutable.getHeight()/100f);
-                paint.setColor(Color.RED);
-                for(int i=0;i<10;i++)
-                {
-                    if(((float [][]) depthEstimationModel.outputMap.get(2))[0][i]>=0.6)//check scores
-                    {
-                        paint.setStyle(Paint.Style.STROKE);
-                        float[] rectArray =((float[][][])depthEstimationModel.outputMap.get(0))[0][i];
-                        RectF detection=new RectF(rectArray[1]*bitmap.getWidth(),rectArray[0]*bitmap.getHeight(),rectArray[3]*bitmap.getWidth(),rectArray[2]*bitmap.getHeight());
-                        canvas.drawRect(detection,paint);
-                        paint.setStyle(Paint.Style.FILL);
-                        canvas.drawText(labels[(int)(((float[][]) depthEstimationModel.outputMap.get(1))[0][i])],rectArray[1]*bitmap.getWidth() ,rectArray[0]*bitmap.getHeight()-10,paint);
-                        canvas.drawText( Float.toString(((float[][]) depthEstimationModel.outputMap.get(2))[0][i]),rectArray[1]*bitmap.getWidth()+600 ,rectArray[0]*bitmap.getHeight()-10,paint);
 
-                    }
-                }
-                imageView.setImageBitmap(mutable);
+                imageView.setImageBitmap(drawRectF(bitmap,0.5f,0));
 
 
 
             }
 
         });
+        systemHandler.postDelayed(systemRunnable,100);
 
 
 
 
+    }
+    public Bitmap drawRectF(Bitmap bitmap,float confidence,int labelCondition)
+    {
+        Bitmap mutable = bitmap.copy(Bitmap.Config.ARGB_8888,true);
+        //imageView.setImageBitmap(depthEstimationModel.runInference(bitmap));
+        Canvas canvas = new Canvas(mutable);
+        paint.setTextSize(mutable.getHeight()/15f);
+        paint.setStrokeWidth(mutable.getHeight()/100f);
+        paint.setColor(Color.RED);
+        for(int i=0;i<10;i++)
+        {
+            if(((float [][]) depthEstimationModel.outputMap.get(2))[0][i]>=confidence && (int)((float[][]) depthEstimationModel.outputMap.get(2))[0][i]==labelCondition)//check scores and object type search condition
+            {
+                paint.setStyle(Paint.Style.STROKE);
+                float[] rectArray =((float[][][])depthEstimationModel.outputMap.get(0))[0][i];
+                RectF detection=new RectF(rectArray[1]*bitmap.getWidth(),rectArray[0]*bitmap.getHeight(),rectArray[3]*bitmap.getWidth(),rectArray[2]*bitmap.getHeight());
+                rectXCenter=detection.centerX();
+                rectArea=(detection.right-detection.left)*(detection.bottom-detection.top);
+                if(areaInit==false)
+                {
+                    rectAreaRef=rectArea;
+                    areaInit=true;
+                }
+                canvas.drawRect(detection,paint);
+                paint.setStyle(Paint.Style.FILL);
+                canvas.drawText(labels[(int)(((float[][]) depthEstimationModel.outputMap.get(1))[0][i])],rectArray[1]*bitmap.getWidth() ,rectArray[0]*bitmap.getHeight()-10,paint);
+                canvas.drawText( Float.toString(((float[][]) depthEstimationModel.outputMap.get(2))[0][i]),rectArray[1]*bitmap.getWidth()+600 ,rectArray[0]*bitmap.getHeight()-10,paint);
+                break;  //ensure only one object is tracked
+
+            }
+        }
+        return mutable;
+    }
+
+    void requestToUrl(String command){      //make request from given command
+        ConnectivityManager connectivityManager= (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);  //Get Connectivity Service
+        Network network=connectivityManager.getActiveNetwork();     //Get the Active network ->needs to be non-null
+        NetworkCapabilities networkCapabilities= connectivityManager.getNetworkCapabilities(network); //get Capabilities, needs to be non-null with WiFi Transport
+        if(network!=null && networkCapabilities!=null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ){ //validate connection case
+            executor.execute(new Runnable() {   //set execution on executor thread
+                @Override
+                public void run() {     //execute when running
+                    wifiManager.getUrl("http://" + "192.168.4.1" + "/" + command);   //format command by given ip address on previous intent
+
+                }
+            });
+        }
+        else {
+            Toast.makeText(MainActivity.this, "Device Not Connected!", Toast.LENGTH_SHORT).show();    //give connection error via pop-up toast
+        }
+    }
+    private int[] inferWifiCommands(int maxPwm,int areaScaler)
+    {
+        int[] commands= new int[2];
+        float centering = (rectXCenter-0.5f)*2*maxPwm;
+        commands[0]=(int)(centering);
+        commands[1]=(int)(-centering);
+        float areaError=rectAreaRef-rectArea;
+        float speedCtrl=areaError*areaScaler;
+        commands[0]+=(int)speedCtrl;
+        commands[1]+=(int)speedCtrl;
+        commands[0]=Math.min(Math.max(-255,commands[0]),255);
+        commands[0]=Math.min(Math.max(-255,commands[1]),255);
+        return commands;
     }
     }

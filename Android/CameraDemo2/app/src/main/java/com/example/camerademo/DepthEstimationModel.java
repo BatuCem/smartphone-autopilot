@@ -116,7 +116,5 @@ public class DepthEstimationModel {
         }
         return labelList.toArray(new String[0]);
     }
-
-
-
+    
 }
