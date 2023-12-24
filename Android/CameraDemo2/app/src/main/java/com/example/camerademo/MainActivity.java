@@ -46,6 +46,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -67,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
     private HandlerThread handlerThread=new HandlerThread("Main Thread");
     public static final int REQUEST_CAMERA_PERMISSION = 200;//code for camera permit
     private Paint paint;
+    private String[] labels;
 
 
     @Override
@@ -78,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
         textureView = findViewById(R.id.textureView);
         procTimeView=findViewById(R.id.procTimeView);
         imageView=findViewById(R.id.imageView);
+        paint=new Paint();
 
 
 
@@ -93,6 +96,7 @@ public class MainActivity extends AppCompatActivity {
         handler= new Handler();
         try {
             depthEstimationModel = new DepthEstimationModel(this, 4);
+            labels=depthEstimationModel.loadLabels(this);
         } catch(IOException e)
         {
             Log.e(TAG, "onCreate: IOEX_depthEst" );
@@ -124,16 +128,23 @@ public class MainActivity extends AppCompatActivity {
                 //imageView.setImageBitmap(depthEstimationModel.runInference(bitmap));
                 Canvas canvas = new Canvas(mutable);
                 paint.setTextSize(mutable.getHeight()/15f);
-                paint.setStrokeWidth(mutable.getHeight()/85f);
+                paint.setStrokeWidth(mutable.getHeight()/100f);
                 paint.setColor(Color.RED);
                 for(int i=0;i<10;i++)
                 {
-                    if(((float [][]) depthEstimationModel.outputMap.get(2))[0][i]>=0.5)//check scores
+                    if(((float [][]) depthEstimationModel.outputMap.get(2))[0][i]>=0.6)//check scores
                     {
                         paint.setStyle(Paint.Style.STROKE);
-                        float[4] rectArray = depthEstimationModel.outputMap.get(0)[0][i];
+                        float[] rectArray =((float[][][])depthEstimationModel.outputMap.get(0))[0][i];
+                        RectF detection=new RectF(rectArray[1]*bitmap.getWidth(),rectArray[0]*bitmap.getHeight(),rectArray[3]*bitmap.getWidth(),rectArray[2]*bitmap.getHeight());
+                        canvas.drawRect(detection,paint);
+                        paint.setStyle(Paint.Style.FILL);
+                        canvas.drawText(labels[(int)(((float[][]) depthEstimationModel.outputMap.get(1))[0][i])],rectArray[1]*bitmap.getWidth() ,rectArray[0]*bitmap.getHeight()-10,paint);
+                        canvas.drawText( Float.toString(((float[][]) depthEstimationModel.outputMap.get(2))[0][i]),rectArray[1]*bitmap.getWidth()+600 ,rectArray[0]*bitmap.getHeight()-10,paint);
+
                     }
                 }
+                imageView.setImageBitmap(mutable);
 
 
 

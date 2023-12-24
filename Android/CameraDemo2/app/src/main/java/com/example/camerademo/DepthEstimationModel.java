@@ -25,6 +25,8 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 public class DepthEstimationModel {
@@ -80,7 +82,7 @@ public class DepthEstimationModel {
         outputMap.put(3, numDetections);
         tfliteInterpreter.runForMultipleInputsOutputs(new Object[]{inputTensor.getBuffer()},outputMap);
         long tFinal= System.currentTimeMillis();
-        MainActivity.procTimeView.setText("Model Process Time" + Long.toString(tFinal-tInit) +"ms");
+        MainActivity.procTimeView.setText("Inference Time " + Long.toString(tFinal-tInit) +"ms");
     }
     private Bitmap postShape (float[] outData)
     {
@@ -98,6 +100,23 @@ public class DepthEstimationModel {
         }
         return bitmap;
     }
+    public String[] loadLabels(Context context)
+    {
+        List<String> labelList = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(context.getAssets().open("labelmap.txt"))))
+        {
+            String line;
+            while((line=reader.readLine())!=null)
+            {
+                labelList.add(line);
+            }
+        }catch (IOException e)
+        {
+
+        }
+        return labelList.toArray(new String[0]);
+    }
+
 
 
 }
