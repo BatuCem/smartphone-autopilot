@@ -8,6 +8,7 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.View;
 import android.widget.Button;
 import android.widget.SeekBar;
@@ -79,7 +80,7 @@ public class ButtonActivity extends AppCompatActivity {
             executor.execute(new Runnable() {   //set execution on executor thread
                 @Override
                 public void run() {     //execute when running
-                    wifiManager.getUrl("http://" + ipActivity.ipAddress + "/" + command);   //format command by given ip address on previous intent
+                    wifiManager.getUrl("http://" + "192.168.4.1" + "/" + command);   //format command by given ip address on previous intent
 
                 }
             });

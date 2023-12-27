@@ -80,8 +80,10 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void run() {
             int[] commands = new int[2];
-            commands=inferWifiCommands(200,1);
-            requestToUrl(wifiManager.commandIntegers(commands[0],commands[1]));
+            commands=inferWifiCommands(200,255);
+            String commandWifi=wifiManager.commandIntegers(commands[0],commands[1]);
+            requestToUrl(commandWifi);
+            Log.i(TAG, "Command Sent: "+ commandWifi);
 
             systemHandler.postDelayed(systemRunnable,100);
         }
@@ -126,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
             public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
-                imageCaptureManager.openCamera(frontCameraIds[0], 0, textureView);
+                imageCaptureManager.openCamera(backCameraIds[0], 0, textureView);
             }
 
             @Override
@@ -169,13 +171,14 @@ public class MainActivity extends AppCompatActivity {
         paint.setColor(Color.RED);
         for(int i=0;i<10;i++)
         {
-            if(((float [][]) depthEstimationModel.outputMap.get(2))[0][i]>=confidence && (int)((float[][]) depthEstimationModel.outputMap.get(2))[0][i]==labelCondition)//check scores and object type search condition
+            if(((float [][]) depthEstimationModel.outputMap.get(2))[0][i]>=confidence && (int)(((float[][]) depthEstimationModel.outputMap.get(1))[0][i])==labelCondition)//check scores and object type search condition
             {
                 paint.setStyle(Paint.Style.STROKE);
                 float[] rectArray =((float[][][])depthEstimationModel.outputMap.get(0))[0][i];
+                RectF rawDetection=new RectF(rectArray[1],rectArray[0],rectArray[3],rectArray[2]);
                 RectF detection=new RectF(rectArray[1]*bitmap.getWidth(),rectArray[0]*bitmap.getHeight(),rectArray[3]*bitmap.getWidth(),rectArray[2]*bitmap.getHeight());
-                rectXCenter=detection.centerX();
-                rectArea=(detection.right-detection.left)*(detection.bottom-detection.top);
+                rectXCenter=rawDetection.centerY();
+                rectArea=(rawDetection.right-rawDetection.left)*(rawDetection.bottom-rawDetection.top);
                 if(areaInit==false)
                 {
                     rectAreaRef=rectArea;
@@ -186,6 +189,7 @@ public class MainActivity extends AppCompatActivity {
                 canvas.drawText(labels[(int)(((float[][]) depthEstimationModel.outputMap.get(1))[0][i])],rectArray[1]*bitmap.getWidth() ,rectArray[0]*bitmap.getHeight()-10,paint);
                 canvas.drawText( Float.toString(((float[][]) depthEstimationModel.outputMap.get(2))[0][i]),rectArray[1]*bitmap.getWidth()+600 ,rectArray[0]*bitmap.getHeight()-10,paint);
                 break;  //ensure only one object is tracked
+
 
             }
         }
@@ -220,7 +224,7 @@ public class MainActivity extends AppCompatActivity {
         commands[0]+=(int)speedCtrl;
         commands[1]+=(int)speedCtrl;
         commands[0]=Math.min(Math.max(-255,commands[0]),255);
-        commands[0]=Math.min(Math.max(-255,commands[1]),255);
+        commands[1]=Math.min(Math.max(-255,commands[1]),255);
         return commands;
     }
     }

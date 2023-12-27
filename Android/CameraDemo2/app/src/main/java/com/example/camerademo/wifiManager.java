@@ -16,6 +16,7 @@ public class wifiManager {
             return response.body().string();    //return response if exception isn't thrown
         }catch (IOException e)
         {
+            e.printStackTrace();
             return "ConnectionError";    //return error message when exception is caught
         }
     }
