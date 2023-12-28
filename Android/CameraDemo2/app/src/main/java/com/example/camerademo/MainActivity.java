@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -80,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void run() {
             int[] commands = new int[2];
-            commands=inferWifiCommands(200,255);
+            commands=inferWifiCommands(180,255,255);
             String commandWifi=wifiManager.commandIntegers(commands[0],commands[1]);
             requestToUrl(commandWifi);
             Log.i(TAG, "Command Sent: "+ commandWifi);
@@ -92,6 +93,8 @@ public class MainActivity extends AppCompatActivity {
     private boolean areaInit=false;
     private float rectArea;
     private float rectAreaRef;
+    private Matrix rotMatrix = new Matrix();
+    private Matrix rotMatrixComplement = new Matrix();
 
 
     @Override
@@ -104,6 +107,8 @@ public class MainActivity extends AppCompatActivity {
         procTimeView=findViewById(R.id.procTimeView);
         imageView=findViewById(R.id.imageView);
         paint=new Paint();
+        rotMatrix.postRotate(-90);
+        rotMatrixComplement.postRotate(90);
 
 
 
@@ -145,6 +150,7 @@ public class MainActivity extends AppCompatActivity {
             public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
 
                 Bitmap bitmap = textureView.getBitmap();
+                bitmap= Bitmap.createBitmap(bitmap,0,0,bitmap.getWidth(),bitmap.getHeight(),rotMatrix,true);
                 //imageCaptureManager.processImage(bitmap);
                 depthEstimationModel.detectObjects(bitmap);
 
@@ -177,7 +183,7 @@ public class MainActivity extends AppCompatActivity {
                 float[] rectArray =((float[][][])depthEstimationModel.outputMap.get(0))[0][i];
                 RectF rawDetection=new RectF(rectArray[1],rectArray[0],rectArray[3],rectArray[2]);
                 RectF detection=new RectF(rectArray[1]*bitmap.getWidth(),rectArray[0]*bitmap.getHeight(),rectArray[3]*bitmap.getWidth(),rectArray[2]*bitmap.getHeight());
-                rectXCenter=rawDetection.centerY();
+                rectXCenter=rawDetection.centerX();
                 rectArea=(rawDetection.right-rawDetection.left)*(rawDetection.bottom-rawDetection.top);
                 if(areaInit==false)
                 {
@@ -186,14 +192,13 @@ public class MainActivity extends AppCompatActivity {
                 }
                 canvas.drawRect(detection,paint);
                 paint.setStyle(Paint.Style.FILL);
-                canvas.drawText(labels[(int)(((float[][]) depthEstimationModel.outputMap.get(1))[0][i])],rectArray[1]*bitmap.getWidth() ,rectArray[0]*bitmap.getHeight()-10,paint);
-                canvas.drawText( Float.toString(((float[][]) depthEstimationModel.outputMap.get(2))[0][i]),rectArray[1]*bitmap.getWidth()+600 ,rectArray[0]*bitmap.getHeight()-10,paint);
+                canvas.drawText(labels[(int)(((float[][]) depthEstimationModel.outputMap.get(1))[0][i])]+" "+Float.toString(((float[][]) depthEstimationModel.outputMap.get(2))[0][i]),rectArray[1]*bitmap.getWidth() ,rectArray[0]*bitmap.getHeight()-10,paint);
                 break;  //ensure only one object is tracked
 
 
             }
         }
-        return mutable;
+        return Bitmap.createBitmap(mutable,0,0,mutable.getWidth(),mutable.getHeight(),rotMatrixComplement,true);
     }
 
     void requestToUrl(String command){      //make request from given command
@@ -213,18 +218,18 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(MainActivity.this, "Device Not Connected!", Toast.LENGTH_SHORT).show();    //give connection error via pop-up toast
         }
     }
-    private int[] inferWifiCommands(int maxPwm,int areaScaler)
+    private int[] inferWifiCommands(int maxPwm,int centerScaler,int areaScaler)
     {
         int[] commands= new int[2];
-        float centering = (rectXCenter-0.5f)*2*maxPwm;
+        float centering = (rectXCenter-0.5f)*2*centerScaler;
         commands[0]=(int)(centering);
         commands[1]=(int)(-centering);
         float areaError=rectAreaRef-rectArea;
         float speedCtrl=areaError*areaScaler;
-        commands[0]+=(int)speedCtrl;
-        commands[1]+=(int)speedCtrl;
-        commands[0]=Math.min(Math.max(-255,commands[0]),255);
-        commands[1]=Math.min(Math.max(-255,commands[1]),255);
+        //commands[0]+=(int)speedCtrl;
+        //commands[1]+=(int)speedCtrl;
+        commands[0]=Math.min(Math.max(-maxPwm,commands[0]),maxPwm);
+        commands[1]=Math.min(Math.max(-maxPwm,commands[1]),maxPwm);
         return commands;
     }
     }
