@@ -3,6 +3,7 @@ package com.example.camerademo;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
+import android.util.Log;
 
 
 import org.tensorflow.lite.DataType;
@@ -32,6 +33,7 @@ import java.util.Map;
 
 public class DepthEstimationModel {
 
+    private static final String TAG="AndroidCameraApi";//error handling tag
     private Interpreter tfliteInterpreter;
     public Map<Integer, Object> outputMap = new HashMap<>();
     private int imgDim =300;
@@ -83,6 +85,7 @@ public class DepthEstimationModel {
         outputMap.put(3, numDetections);
         tfliteInterpreter.runForMultipleInputsOutputs(new Object[]{inputTensor.getBuffer()},outputMap);
         long tFinal= System.currentTimeMillis();
+        Log.i(TAG, "detectObjects: TIMEMEASURED (ms) " + Long.toString(tFinal-tInit));
         MainActivity.procTimeView.setText("Inference Time " + Long.toString(tFinal-tInit) +"ms");
     }
     private Bitmap postShape (float[] outData)
