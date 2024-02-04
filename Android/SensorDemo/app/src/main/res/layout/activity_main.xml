@@ -42,6 +42,23 @@
         android:layout_marginStart="166dp"
         android:layout_marginTop="24dp"
         android:text="Temperature" />
+    <TextView
+        android:id="@+id/textView_prox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="40"
+        android:layout_marginStart="166dp"
+        android:layout_marginTop="24dp"
+        android:text="PROX" />
+    <TextView
+        android:id="@+id/textView_light"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="40"
+        android:layout_marginStart="166dp"
+        android:layout_marginTop="24dp"
+        android:text="ILL" />
+
 
     <TextView
         android:id="@+id/textView_mag"

@@ -171,7 +171,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     }
-    public Bitmap drawRectF(Bitmap bitmap,float confidence,int labelCondition)
+    public Bitmap drawRectF(Bitmap bitmap,float confidence,i nt labelCondition)
     {
         Bitmap mutable = bitmap.copy(Bitmap.Config.ARGB_8888,true);
         //imageView.setImageBitmap(depthEstimationModel.runInference(bitmap));

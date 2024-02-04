@@ -9,6 +9,9 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraDevice;
+import android.hardware.camera2.CameraManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -24,7 +27,7 @@ import com.jjoe64.graphview.series.LineGraphSeries;
 
 public class MainActivity extends AppCompatActivity {
     int Sampling_Period = 1000000; // in us (1Hz)
-    private TextView textView_mag,textView_temp,textView_accel,textView_gyro,textView_hum,textView_gps;
+    private TextView textView_mag,textView_temp,textView_accel,textView_gyro,textView_hum,textView_gps,textView_prox,textView_ill;
     private GraphView graphView;
     private int REQUEST_PERMISSIONS_CODE=200;
     public int sampleCounter=0;
@@ -41,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
         textView_accel=findViewById(R.id.textView_accel);
         textView_hum=findViewById(R.id.textView_hum);
         textView_gps=findViewById(R.id.textView_gps);
+        textView_prox=findViewById(R.id.textView_prox);
+        textView_ill=findViewById(R.id.textView_light);
         graphView=findViewById(R.id.graph);
         //check and ask permissions
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -56,6 +61,8 @@ public class MainActivity extends AppCompatActivity {
         Sensor sensor_temp = sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE);
         Sensor sensor_accel = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         Sensor sensor_gyro = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        Sensor sensor_prox = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+        Sensor sensor_light= sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
         //Setup GPS and plotter
         LocationManager locationManager = (LocationManager) this.getSystemService(LOCATION_SERVICE);
         accYSeries=new LineGraphSeries<>();
@@ -73,7 +80,43 @@ public class MainActivity extends AppCompatActivity {
 
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,Sampling_Period/1000,0,locationListener);
 
+        SensorEventListener sensorEventListenerProx = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent event) {
 
+                textView_prox.setText("Proximity "+event.values[0]);
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+            }
+        };
+        SensorEventListener sensorEventListenerLight = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent event) {
+
+                textView_ill.setText("LUX "+event.values[0]);
+
+                CameraManager cameraManager = ( CameraManager)getSystemService(CAMERA_SERVICE);
+                try {
+                    if (event.values[0] < 30) {
+                        cameraManager.setTorchMode("0", true);
+                    } else {
+                        cameraManager.setTorchMode("0", false);
+                    }
+                } catch ( CameraAccessException e)
+                {
+
+                }
+
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+            }
+        };
         //Define each sensor event listener to set textView texts
         SensorEventListener sensorEventListenerHum = new SensorEventListener() {
             @Override
@@ -139,6 +182,8 @@ public class MainActivity extends AppCompatActivity {
         sensorManager.registerListener(sensorEventListenerAccel,sensor_accel,Sampling_Period);
         sensorManager.registerListener(sensorEventListenerGyro,sensor_gyro,Sampling_Period);
         sensorManager.registerListener(sensorEventListenerMag,sensor_mag,Sampling_Period);
+        sensorManager.registerListener(sensorEventListenerLight,sensor_light,Sampling_Period);
+        sensorManager.registerListener(sensorEventListenerProx,sensor_prox,Sampling_Period);
     }
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
