@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class ImageCaptureManager extends AppCompatActivity {
+    //class to handle image capturing from camera
     private Context context;
     private int backCams;
     private int frontCams;
@@ -44,33 +45,30 @@ public class ImageCaptureManager extends AppCompatActivity {
     private Handler backgroundHandler;
     private ImageReader[] imageReaders;
     private Size[] imagesDimensions;
-
-
-    public long processTime;
-
     public Image[] imageCapture;
-    public Bitmap outputBitmap;
     String TAG = "ImageCaptureManagement";
 
     public ImageCaptureManager(Context context)
     {
+        //builder for class
         this.context=context;
-        this.backCams=SettingsActivity.backCameraSpinnerValue;
+        this.backCams=SettingsActivity.backCameraSpinnerValue; //get number of cameras from GUI
         this.frontCams=SettingsActivity.frontCameraSpinnerValue;
         this.totalCameras=backCams+frontCams;
-        this.cameraManager=(CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
-        this.cameraDevices=new CameraDevice[totalCameras];
+        this.cameraManager=(CameraManager) context.getSystemService(Context.CAMERA_SERVICE);//open camera service
+        this.cameraDevices=new CameraDevice[totalCameras];  //define array lengths for multi-camera handling
         this.cameraCharacteristics=new CameraCharacteristics[totalCameras];
         this.captureRequestBuilders=new CaptureRequest.Builder[totalCameras];
         this.captureSessions= new CameraCaptureSession[totalCameras];
         this.surfaces=new Surface[totalCameras];
-
         this.imageReaders = new ImageReader[totalCameras];
         this.imagesDimensions=new Size[totalCameras];
         this.imageCapture= new Image[totalCameras];
+        //setup operation on background thread
         this.handlerThread= new HandlerThread("CameraBackground");
         this.handlerThread.start();
         this.backgroundHandler=new Handler(handlerThread.getLooper());
+        //Implement if GUI settings to auto-find IDs are on, find IDs or get manual values
         if(SettingsActivity.backCameraAutoIdEnabled==true)
         {
             backCameraIds=findIDs(backCams,CameraCharacteristics.LENS_FACING_BACK);
@@ -88,24 +86,16 @@ public class ImageCaptureManager extends AppCompatActivity {
         {
             frontCameraIds=SettingsActivity.frontCameraIds.toArray(new String[0]);
         }
-
+        //copy got back and front camera ids to indexes
         String[] cameraIds = new String[totalCameras];
         System.arraycopy(backCameraIds, 0, cameraIds, 0, backCams);
         System.arraycopy(frontCameraIds, 0, cameraIds, backCams, frontCams);
         for(int i=0;i<totalCameras;i++ )
         {
+            //open up cameras from ids for each selected
             openCamera(cameraIds[i],i);
         }
-
-
-
     }
-
-
-
-    //method to take in a needed amount of (lim) camera IDs into a variable, with selection given
-    //the lens orientation
-
     public void openCamera(String cameraId,int index){
         try {//try for opening camera handling permission
 
@@ -227,12 +217,14 @@ public class ImageCaptureManager extends AppCompatActivity {
     }
     public void closeCameras()
     {
+        //close all cameras
         for(int i=0;i<totalCameras;i++ )
         {
             closeCamera(i);
         }
     }
     private void closeCamera(int index){
+        //close specific camera
         if(cameraDevices[index]!=null)
         {
             cameraDevices[index].close();
@@ -244,6 +236,7 @@ public class ImageCaptureManager extends AppCompatActivity {
     }
     public String[] getCameraIds(boolean selectBack)
     {
+        //method to get ids externally to class
         if(selectBack==true)//true returns backwards
         {
             return backCameraIds;

@@ -22,15 +22,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SettingsActivity extends AppCompatActivity {
-
+    //class to implement Settings layout in GUI and get simultaneous/set-up settings
     private String TAG="SettingsActivity";
-
+    //declare GUI elements
     private EditText wifiIpEditText, flashThresholdEditText,objectTrackEditText, backManualIdInput, frontManualIdInput;
     private Spinner backCameraSpinner, frontCameraSpinner;
     private CheckBox proximitySensorCheckBox, backCameraAutoId, frontCameraAutoId;
     private Button initializeProgramButton, backAddIdButton, frontAddIdButton;
     private TextView backCameraIdList, frontCameraIdList;
-
+    //declare user input values (public)
     public static String wifiIp;
     public static boolean proximitySensorEnabled;
     public static int flashThreshold;
@@ -46,7 +46,7 @@ public class SettingsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_settings);
 
         // Initialize components
-        initializeComponents();
+        initializeComponents(); //connect declared GUI elements to layout
 
         // Setup Spinners
         setupSpinners();
@@ -82,6 +82,7 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void setupSpinners() {
+        //method to setup spinners from 0 to 3 for  both side cameras
         ArrayAdapter<Integer> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, new Integer[]{0, 1, 2, 3});
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         backCameraSpinner.setAdapter(adapter);

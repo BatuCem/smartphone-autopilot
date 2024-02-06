@@ -1,11 +1,15 @@
 package com.example.autopilot;
 
-public class ControlUtils {
+import android.util.Log;
 
-    public static String commandIntegers (int a, int b)
-    {
-        String aStr = (a >= 0 ? "+" : "-") + String.format("%03d", Math.abs(a));
-        String bStr = (b >= 0 ? "+" : "-") + String.format("%03d", Math.abs(b));
-        return aStr + bStr;
+public class ControlUtils {
+//Class to implement controller utilities
+    private static final String TAG = "ControlUtils"; //TAG for logging
+    public static String commandIntegers (int left, int right)
+    {   //Method to implement creating a string command from left/right motor speeds
+        String leftString = (left >= 0 ? "+" : "-") + String.format("%03d", Math.abs(left));
+        String rightString = (right >= 0 ? "+" : "-") + String.format("%03d", Math.abs(right));
+        Log.i(TAG, "commandIntegers: "+leftString+rightString);//format"+017-195" type command
+        return leftString+rightString;
     }
 }
