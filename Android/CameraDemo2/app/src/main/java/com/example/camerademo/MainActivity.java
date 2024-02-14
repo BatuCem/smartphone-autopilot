@@ -165,13 +165,13 @@ public class MainActivity extends AppCompatActivity {
             }
 
         });
-        systemHandler.postDelayed(systemRunnable,100);
+        systemHandler.postDelayed(systemRunnable,10);
 
 
 
 
     }
-    public Bitmap drawRectF(Bitmap bitmap,float confidence,i nt labelCondition)
+    public Bitmap drawRectF(Bitmap bitmap,float confidence,int labelCondition)
     {
         Bitmap mutable = bitmap.copy(Bitmap.Config.ARGB_8888,true);
         //imageView.setImageBitmap(depthEstimationModel.runInference(bitmap));

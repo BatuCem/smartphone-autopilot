@@ -9,6 +9,8 @@ import org.tensorflow.lite.support.common.ops.NormalizeOp;
 import org.tensorflow.lite.support.image.ImageProcessor;
 import org.tensorflow.lite.support.image.TensorImage;
 import org.tensorflow.lite.support.image.ops.ResizeOp;
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
+
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -25,7 +27,10 @@ public class DetectionTensorflow {
     private static final String TAG="DetectionTensorflow";//logging tag for class
     private Interpreter tfliteInterpreter;
     public Map<Integer, Object> outputMap = new HashMap<>();
-    private int imgDim =300; //TODO: parametrize dimensions to extend functionality for different ML models
+    private static int imgDim;
+    public static String[] labels;
+
+    private ImageProcessor inputTensorProcessor;
     public DetectionTensorflow (Context context, int numThreads) throws IOException
     {
         //build class
@@ -34,7 +39,13 @@ public class DetectionTensorflow {
         options.setNumThreads(numThreads); //get interpreter options and set thread numbers
         MappedByteBuffer modelFile=loadModelFile(context);  //load the model file
         tfliteInterpreter= new Interpreter(modelFile,options);  //build interpreter from file and options
-        Log.i(TAG, "DetectionTensorflow: SUCCESSFUL");
+        imgDim = tfliteInterpreter.getInputTensor(0).shape()[1];
+        labels=loadLabels(context);inputTensorProcessor = new ImageProcessor.Builder()  //build image processor
+            .add(new ResizeOp(imgDim,imgDim, ResizeOp.ResizeMethod.BILINEAR))   //resize to model size
+            //.add(new NormalizeOp(new float[] {123.675f ,  116.28f ,  103.53f}, new float[] {58.395f , 57.12f ,  57.375f}))  //normalize wrt model data
+            .build();   //TODO: find a way to get normalization parametric to extend to different ML models, note NormalizeOp is also NOT a MUST-HAVE
+        Log.i(TAG, "DetectionTensorflow: SUCCESSFUL" );
+
     }
 
     private MappedByteBuffer loadModelFile(Context context) throws IOException {
@@ -47,10 +58,6 @@ public class DetectionTensorflow {
         long declaredLength = fileDescriptor.getDeclaredLength();
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
     }
-    private ImageProcessor inputTensorProcessor = new ImageProcessor.Builder()  //build image processor
-            .add(new ResizeOp(imgDim,imgDim, ResizeOp.ResizeMethod.BILINEAR))   //resize to model size
-            .add(new NormalizeOp(new float[] {123.675f ,  116.28f ,  103.53f}, new float[] {58.395f , 57.12f ,  57.375f}))  //normalize wrt model data
-            .build();   //TODO: find a way to get normalization parametric to extend to different ML models, note NormalizeOp is also NOT a MUST-HAVE
     public void detectObjects(Bitmap bitmap)
     {
         //method to detect objects with ML model from a given bitmap

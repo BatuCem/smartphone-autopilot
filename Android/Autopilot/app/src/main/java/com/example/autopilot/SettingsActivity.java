@@ -2,6 +2,7 @@ package com.example.autopilot;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -20,13 +21,28 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class SettingsActivity extends AppCompatActivity {
     //class to implement Settings layout in GUI and get simultaneous/set-up settings
     private String TAG="SettingsActivity";
+
+    private static final String SHARED_PREFS = "Settings";
+    private static final String WiFiKey= "WifiKey";
+    private static final String ProximityEnabled = "ProxKey";
+    private static final String BackCameraAutoIdEnabled = "BackAutoKey";
+    private static final String FrontCameraAutoIdEnabled = "FrontAutoKey";
+    private static final String FlashThreshold = "FlashKey";
+    private static final String ObjectTracked = "ObjectKey";
+    private static final String BackCameraQuantity = "BackQuantityKey";
+    private static final String FrontCameraQuantity = "FrontQuantityKey";
+    private static final String BackCameraIdList = "BackIdKey";
+    private static final String FrontCameraIdList = "FrontIdKey";
+    private SharedPreferences sharedPreferences;
+
     //declare GUI elements
-    private EditText wifiIpEditText, flashThresholdEditText,objectTrackEditText, backManualIdInput, frontManualIdInput;
-    private Spinner backCameraSpinner, frontCameraSpinner;
+    private EditText wifiIpEditText, flashThresholdEditText, backManualIdInput, frontManualIdInput;
+    private Spinner backCameraSpinner, frontCameraSpinner, objectTrackSpinner;
     private CheckBox proximitySensorCheckBox, backCameraAutoId, frontCameraAutoId;
     private Button initializeProgramButton, backAddIdButton, frontAddIdButton;
     private TextView backCameraIdList, frontCameraIdList;
@@ -34,11 +50,10 @@ public class SettingsActivity extends AppCompatActivity {
     public static String wifiIp;
     public static boolean proximitySensorEnabled;
     public static int flashThreshold;
-    public static int detectionType;
     public static List<String> backCameraIds = new ArrayList<>();
     public static List<String> frontCameraIds = new ArrayList<>();
     public static boolean backCameraAutoIdEnabled, frontCameraAutoIdEnabled;
-    public static int backCameraSpinnerValue, frontCameraSpinnerValue;
+    public static int backCameraSpinnerValue, frontCameraSpinnerValue, detectionType;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +63,7 @@ public class SettingsActivity extends AppCompatActivity {
         // Initialize components
         initializeComponents(); //connect declared GUI elements to layout
 
+        sharedPreferences = getSharedPreferences(SHARED_PREFS, MODE_PRIVATE);
         // Setup Spinners
         setupSpinners();
 
@@ -78,7 +94,7 @@ public class SettingsActivity extends AppCompatActivity {
         frontAddIdButton = findViewById(R.id.front_add_id_button);
         backCameraIdList = findViewById(R.id.back_camera_id_list);
         frontCameraIdList = findViewById(R.id.front_camera_id_list);
-        objectTrackEditText = findViewById(R.id.object_track);
+        objectTrackSpinner = findViewById(R.id.object_track);
     }
 
     private void setupSpinners() {
@@ -87,6 +103,9 @@ public class SettingsActivity extends AppCompatActivity {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         backCameraSpinner.setAdapter(adapter);
         frontCameraSpinner.setAdapter(adapter);
+        ArrayAdapter<String> adapterString = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, DetectionTensorflow.labels);
+        adapterString.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        objectTrackSpinner.setAdapter(adapterString);
     }
 
     private void setupButtonListeners() {
@@ -129,6 +148,18 @@ public class SettingsActivity extends AppCompatActivity {
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        objectTrackSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                detectionType = position;
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
             }
         });
 
@@ -187,27 +218,7 @@ public class SettingsActivity extends AppCompatActivity {
                 }
             }
         });
-        objectTrackEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                try {
-                    Log.i(TAG, "afterTextChanged:object "+s);
-                    detectionType = Integer.parseInt(s.toString()); // Update the flashThreshold variable when text changes
-                } catch (NumberFormatException e) {
-                    detectionType = 0; // Invalid number or empty input
-                }
-            }
-        });
 
     }
 
@@ -235,6 +246,7 @@ public class SettingsActivity extends AppCompatActivity {
         frontCameraAutoIdEnabled = frontCameraAutoId.isChecked();
         backCameraSpinnerValue = Integer.parseInt(backCameraSpinner.getSelectedItem().toString());
         frontCameraSpinnerValue = Integer.parseInt(frontCameraSpinner.getSelectedItem().toString());
+
         setResult(RESULT_OK);
         finish();
         // TODO: Use these settings to initialize your program
@@ -246,5 +258,44 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void showToast(String message) {
         Toast.makeText(SettingsActivity.this, message, Toast.LENGTH_SHORT).show();
+    }
+    private void restoreSettings()
+    {
+
+        wifiIp=sharedPreferences.getString(WiFiKey,"192.168.4.1");
+        wifiIpEditText.setText(wifiIp);
+
+        proximitySensorEnabled = sharedPreferences.getBoolean(ProximityEnabled, false);
+        proximitySensorCheckBox.setChecked(proximitySensorEnabled);
+
+        backCameraAutoIdEnabled = sharedPreferences.getBoolean(BackCameraAutoIdEnabled,true);
+        backCameraAutoId.setChecked(backCameraAutoIdEnabled);
+
+        frontCameraAutoIdEnabled = sharedPreferences.getBoolean(FrontCameraAutoIdEnabled, true);
+        frontCameraAutoId.setChecked(frontCameraAutoIdEnabled);
+
+        flashThreshold = sharedPreferences.getInt(FlashThreshold, 5);
+        flashThresholdEditText.setText(String.valueOf(flashThreshold));
+
+        detectionType = sharedPreferences.getInt(ObjectTracked,0);
+        objectTrackSpinner.setSelection(detectionType); //?
+
+        backCameraSpinnerValue = sharedPreferences.getInt(BackCameraQuantity,0);
+        backCameraSpinner.setSelection(backCameraSpinnerValue);
+
+        frontCameraSpinnerValue = sharedPreferences.getInt(FrontCameraQuantity,0);
+        frontCameraSpinner.setSelection(frontCameraSpinnerValue);
+
+        backCameraIds = sharedPreferences.getStringSet(BackCameraIdList, null).stream().collect(Collectors.toList()); //?
+        backCameraIdList.setText(backCameraIds.toString());
+
+        frontCameraIds = sharedPreferences.getStringSet(FrontCameraIdList,null).stream().collect(Collectors.toList()); //?
+        frontCameraIdList.setText(frontCameraIds.toString());
+        
+
+
+
+
+
     }
 }

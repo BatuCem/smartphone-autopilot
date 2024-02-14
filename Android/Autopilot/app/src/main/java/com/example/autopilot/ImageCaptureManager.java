@@ -26,6 +26,8 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ImageCaptureManager extends AppCompatActivity {
     //class to handle image capturing from camera
@@ -33,20 +35,23 @@ public class ImageCaptureManager extends AppCompatActivity {
     private int backCams;
     private int frontCams;
     private int totalCameras;
-    private CameraManager cameraManager;
+    private static CameraManager cameraManager;
     private CameraDevice[] cameraDevices;
     private CameraCharacteristics[] cameraCharacteristics;
     private String[] backCameraIds;
     private String[] frontCameraIds;
-    private CaptureRequest.Builder[] captureRequestBuilders;
-    private CameraCaptureSession[] captureSessions;
+    private static String[] cameraIds;
+    private static CaptureRequest.Builder[] captureRequestBuilders;
+    private static CameraCaptureSession[] captureSessions;
     private Surface[] surfaces;
     private HandlerThread handlerThread=new HandlerThread("CameraBackground");
-    private Handler backgroundHandler;
+    private static Handler[] backgroundHandlers;
     private ImageReader[] imageReaders;
     private Size[] imagesDimensions;
     public Image[] imageCapture;
-    String TAG = "ImageCaptureManagement";
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+    private static final String TAG = "ImageCaptureManagement";
 
     public ImageCaptureManager(Context context)
     {
@@ -67,7 +72,7 @@ public class ImageCaptureManager extends AppCompatActivity {
         //setup operation on background thread
         this.handlerThread= new HandlerThread("CameraBackground");
         this.handlerThread.start();
-        this.backgroundHandler=new Handler(handlerThread.getLooper());
+        this.backgroundHandlers= new Handler[totalCameras];
         //Implement if GUI settings to auto-find IDs are on, find IDs or get manual values
         if(SettingsActivity.backCameraAutoIdEnabled==true)
         {
@@ -87,12 +92,13 @@ public class ImageCaptureManager extends AppCompatActivity {
             frontCameraIds=SettingsActivity.frontCameraIds.toArray(new String[0]);
         }
         //copy got back and front camera ids to indexes
-        String[] cameraIds = new String[totalCameras];
+        cameraIds = new String[totalCameras];
         System.arraycopy(backCameraIds, 0, cameraIds, 0, backCams);
         System.arraycopy(frontCameraIds, 0, cameraIds, backCams, frontCams);
         for(int i=0;i<totalCameras;i++ )
         {
             //open up cameras from ids for each selected
+            backgroundHandlers[i] = new Handler(handlerThread.getLooper());
             openCamera(cameraIds[i],i);
         }
     }
@@ -122,7 +128,7 @@ public class ImageCaptureManager extends AppCompatActivity {
                     cameraDevice.close();
                     cameraDevices[index] = null;
                 }
-            }, backgroundHandler);
+            }, backgroundHandlers[index]);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -132,7 +138,8 @@ public class ImageCaptureManager extends AppCompatActivity {
         try {
             imageReaders[index] = ImageReader.newInstance(imagesDimensions[index].getWidth(), imagesDimensions[index].getHeight(), ImageFormat.JPEG, 1);
             imageReaders[index].setOnImageAvailableListener(reader -> {
-                long tInit=System.currentTimeMillis();
+
+                long tInit = System.currentTimeMillis();
                 Image image = null;
                 try {
                     image = reader.acquireLatestImage();
@@ -144,10 +151,10 @@ public class ImageCaptureManager extends AppCompatActivity {
                 } finally {
                     if (image != null) {
                         image.close();
-                        Log.i(TAG, "createCaptureSession: TIMEMEASURED "+ Long.toString(System.currentTimeMillis()-tInit) +" "+ index);
+                        Log.i(TAG, "createCaptureSession: TIMEMEASURED " + Long.toString(System.currentTimeMillis() - tInit) + " " + index);
                     }
                 }
-            }, backgroundHandler);
+            }, backgroundHandlers[index]);
 
             captureRequestBuilders[index] = cameraDevices[index].createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureRequestBuilders[index].addTarget(imageReaders[index].getSurface());
@@ -164,7 +171,7 @@ public class ImageCaptureManager extends AppCompatActivity {
                         captureRequestBuilders[index].set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                         captureRequestBuilders[index].set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON);
                         captureRequestBuilders[index].set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO);
-                        session.setRepeatingRequest(captureRequestBuilders[index].build(), null, backgroundHandler);
+                        session.setRepeatingRequest(captureRequestBuilders[index].build(), null, backgroundHandlers[index]);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     }
@@ -174,7 +181,7 @@ public class ImageCaptureManager extends AppCompatActivity {
                 public void onConfigureFailed(@NonNull CameraCaptureSession session) {
                     Log.e("ImageCaptureManager", "Camera configuration failed.");
                 }
-            }, backgroundHandler);
+            }, backgroundHandlers[index]);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -244,6 +251,25 @@ public class ImageCaptureManager extends AppCompatActivity {
         else        //default returns front
         {
             return frontCameraIds;
+        }
+    }
+    public static void flashCameraControl (int index, Boolean flashCondition)
+    {
+        if(captureRequestBuilders[index]!=null && captureSessions[index]!=null)
+        {
+            if(flashCondition==true)
+            {
+                captureRequestBuilders[index].set(CaptureRequest.FLASH_MODE,CaptureRequest.FLASH_MODE_TORCH);
+            }
+            else {
+                captureRequestBuilders[index].set(CaptureRequest.FLASH_MODE,CaptureRequest.FLASH_MODE_OFF);
+            }
+            try {
+                captureSessions[index].setRepeatingRequest(captureRequestBuilders[index].build(), null, backgroundHandlers[index]);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+            }
+            Log.i(TAG, "flashCameraControl: "+ flashCondition);
         }
     }
 }
