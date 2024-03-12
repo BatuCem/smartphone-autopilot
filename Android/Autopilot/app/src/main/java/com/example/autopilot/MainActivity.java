@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MainActivity extends AppCompatActivity {
 
     private String TAG = "MainApp";
-    private static final int ControlSampling = 100;
+    private static final int ControlSampling = 50;
     private Toolbar appBar;
     private ImageCaptureManager imageCaptureManager;
     private DetectionTensorflow detectionTensorflow;

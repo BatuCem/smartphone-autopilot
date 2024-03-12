@@ -17,6 +17,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.Manifest;
@@ -26,12 +27,13 @@ import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
 public class MainActivity extends AppCompatActivity {
-    int Sampling_Period = 1000000; // in us (1Hz)
+    public String TAG = "sensorsmanager";
+    int Sampling_Period = 10000; // in us (1Hz)
     private TextView textView_mag,textView_temp,textView_accel,textView_gyro,textView_hum,textView_gps,textView_prox,textView_ill;
     private GraphView graphView;
     private int REQUEST_PERMISSIONS_CODE=200;
     public int sampleCounter=0;
-    public int maxSampleCount=10;
+    public int maxSampleCount=1000;
     public LineGraphSeries<DataPoint> accYSeries;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
         Sensor sensor_mag = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         Sensor sensor_temp = sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE);
         Sensor sensor_accel = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        Sensor sensor_gyro = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        Sensor sensor_gyro = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         Sensor sensor_prox = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
         Sensor sensor_light= sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
         //Setup GPS and plotter
@@ -71,8 +73,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onLocationChanged(@NonNull Location location) {
                 textView_gps.setText("GPS Latitude "+ location.getLatitude());
-                accYSeries.appendData(new DataPoint(sampleCounter,location.getAltitude()),true,maxSampleCount);
-                sampleCounter++;
+
 
 
             }
@@ -166,8 +167,9 @@ public class MainActivity extends AppCompatActivity {
         SensorEventListener sensorEventListenerGyro = new SensorEventListener() {
             @Override
             public void onSensorChanged(SensorEvent event) {
-                textView_gyro.setText("Gyro X:"+event.values[0]+", Y:"+event.values[1]+", Z:" + event.values[2]);
-
+                textView_gyro.setText("Gyro X:"+event.values[0]);
+                accYSeries.appendData(new DataPoint(sampleCounter,event.values[2]),true,maxSampleCount);
+                sampleCounter++;
             }
 
             @Override
@@ -177,6 +179,7 @@ public class MainActivity extends AppCompatActivity {
         };
 
         //Register event listeners to sensors from manager to a specific sampling period in us
+        Log.i(TAG, "onCreate: "+sensorManager.getSensorList(Sensor.TYPE_ALL));
         sensorManager.registerListener(sensorEventListenerHum,sensor_hum,Sampling_Period);
         sensorManager.registerListener(sensorEventListenerTemp,sensor_temp,Sampling_Period);
         sensorManager.registerListener(sensorEventListenerAccel,sensor_accel,Sampling_Period);
