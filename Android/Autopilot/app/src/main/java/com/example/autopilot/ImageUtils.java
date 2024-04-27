@@ -51,6 +51,7 @@ public class ImageUtils {
             }
         }
         Log.i(TAG, "drawRectF: timemeasured"+(System.currentTimeMillis()-tinit));
+
         return Bitmap.createBitmap(mutable);
         //return mutable;
     }

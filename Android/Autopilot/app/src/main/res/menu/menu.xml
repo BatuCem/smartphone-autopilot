@@ -12,5 +12,10 @@
         android:icon="@drawable/ic_info"
         android:id="@+id/info"
         app:showAsAction="ifRoom"/>
+    <item
+        android:title="Maps"
+        android:icon="@drawable/ic_maps"
+        android:id="@+id/maps"
+        app:showAsAction="ifRoom"/>
 
 </menu>

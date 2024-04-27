@@ -11,12 +11,15 @@ public class wifiManager {
     {
         OkHttpClient client=new OkHttpClient(); //set client
         Request request=new Request.Builder().url(url).build(); //request url
+
         try{
             Response response= client.newCall(request).execute();   //get response, catching IOException
             return response.body().string();    //return response if exception isn't thrown
         }catch (IOException e)
         {
-            return "ConnectionError";    //return error message when exception is caught
+            String[] eStr = e.toString().split(" ");
+
+            return eStr[eStr.length-1];    //return error message when exception is caught
         }
     }
 
@@ -35,4 +38,6 @@ public class wifiManager {
         }
 
     }
+
+
 }

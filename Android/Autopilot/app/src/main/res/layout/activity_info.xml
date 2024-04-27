@@ -1,9 +1,93 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingTop="10dp"
+    android:paddingLeft="10dp"
     tools:context=".InfoActivity">
+    <TextView
+        android:id="@+id/BatteryVoltageView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Battery Voltage: "
+        android:textSize="20dp"/>
+    <TextView
+        android:id="@+id/BatteryPowerView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Immediate Settings"
+        android:textSize="20dp"/>
+    <TextView
+        android:id="@+id/AngleLiDARView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="LiDAR Angle: "
+        android:textSize="20dp"/>
+    <TextView
+        android:id="@+id/DistanceLiDARView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="LiDAR Distance: "
+        android:textSize="20dp"/>
+    <TextView
+        android:id="@+id/DistanceUltrasonicView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ultrasonic Distance: "
+        android:textSize="20dp"/>
+    <TextView
+        android:id="@+id/CameraFPSView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Camera Processing FPS: "
+        android:textSize="20dp"/>
+    <TextView
+        android:id="@+id/RotationAngleView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Rotation Angle: "
+        android:textSize="20dp"/>
+    <TextView
+        android:id="@+id/GPSLatitudeView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GPS Latitude: "
+        android:textSize="20dp"/>
+    <TextView
+        android:id="@+id/GPSLongitudeView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GPS Longitude: "
+        android:textSize="20dp"/>
+    <TextView
+        android:id="@+id/GPSAltitudeView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GPS Altitude: "
+        android:textSize="20dp"/>
+    <TextView
+        android:id="@+id/GPSSpeedView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GPS Speed: "
+        android:textSize="20dp"/>
+    <TextView
+        android:id="@+id/GPSDirectionView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GPS Direction: "
+        android:textSize="20dp"/>
+    <TextView
+        android:id="@+id/GPSAccuracyView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GPS Accuracy: "
+        android:textSize="20dp"/>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+
+
+
+</LinearLayout>

@@ -35,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
     private SensorUtil sensorUtil;
     private ImageView imageView;
     private AtomicBoolean isProcessing;
+    public static long FPS;
     private Paint paint;
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
@@ -47,8 +48,15 @@ public class MainActivity extends AppCompatActivity {
             int[] commands = new int[2];
             if((SettingsActivity.proximitySensorEnabled==true && SensorUtil.proximityCondition==true) || SettingsActivity.proximitySensorEnabled==false)
             {
-                    commands=ControlUtils.inferWifiCommands(50,255,240,255,255*2,1000,new int[]  {1,0,0},new int[] {1,0,0});
-                    String commandWifi=ControlUtils.commandIntegers(commands[0],commands[1]);
+                    //******OPMODE 0000:******
+                    //commands=ControlUtils.inferWifiCommands(50,255,240,255,255*2,1000,new int[]  {1,0,0},new int[] {1,0,0});
+                    //String commandWifi=ControlUtils.commandIntegers(commands[0],commands[1]);
+                    //WifiManager.requestToUrl(commandWifi,getBaseContext());
+                    //Log.i(TAG, "Command Sent: "+ commandWifi);
+
+                    //******OPMODE 0001:******
+                    commands = ControlUtils.inferWifiCommandsForRotation(SensorUtil.bearingGPS, SensorUtil.rotation,SensorUtil.distanceGPS,125,255);
+                    String commandWifi = ControlUtils.commandIntegers(commands[0],commands[1]);
                     WifiManager.requestToUrl(commandWifi,getBaseContext());
                     Log.i(TAG, "Command Sent: "+ commandWifi);
 
@@ -59,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     public static final int REQUEST_CAMERA_PERMISSION = 200;//code for camera permit
+    public static final int REQUEST_GPS_PERMISSION = 220;//code for gps permit
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -68,18 +77,23 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(appBar);
         paint = new Paint();
         isProcessing= new AtomicBoolean(false);
-        //ask for necessary permissions (CAMERA)
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
-            return;
-        }
-        try {
-            detectionTensorflow = new DetectionTensorflow(this,4);
-        } catch (IOException e)
-        {
-            Log.e(TAG, "onCreate: ");
-        }
 
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // Permission is not granted; request it from the user
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_GPS_PERMISSION);
+        } else {
+            //ask for necessary permissions (CAMERA)
+            if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+                return;
+            }
+            try {
+                detectionTensorflow = new DetectionTensorflow(this,4);
+            } catch (IOException e)
+            {
+                Log.e(TAG, "onCreate: ");
+            }
+        }
     }
 
     public boolean onCreateOptionsMenu (Menu menu)
@@ -100,6 +114,10 @@ public class MainActivity extends AppCompatActivity {
                 Intent intentInfo = new Intent(this, InfoActivity.class);
                 startActivity(intentInfo);
                 break;
+            case R.id.maps:
+                Intent intentMaps = new Intent(this, MapActivity.class);
+                startActivity(intentMaps);
+                break;
         }
         return true;
     }
@@ -119,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
 
                 runOnUiThread(() -> imageView.setImageBitmap(outputBmp));
                 Log.i(TAG, "onBitmapAvailable: TOTALTIMEMEASURED "+ Long.toString(System.currentTimeMillis()-tInit));
+                FPS = 1000 / (System.currentTimeMillis() - tInit);
 
             } finally {
                 isProcessing.set(false);

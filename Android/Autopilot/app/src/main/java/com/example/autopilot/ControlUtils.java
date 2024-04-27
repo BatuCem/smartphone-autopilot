@@ -47,8 +47,8 @@ public class ControlUtils {
         speedCtrl=Math.min(Math.max(-maxAreaControl,speedCtrl),maxAreaControl);
         Log.i(TAG, "SpeedCtrl area: "+"Error: "+errorArea + "Integral: "+areaAccumulator + "Derivative: " + (areaMemory.get(0)- areaMemory.get(1)));
         Log.i(TAG, "SpeedCtrl center: "+"Error: "+errorCenter + "Integral: "+centerAccumulator + "Derivative: " + (centerMemory.get(0)- centerMemory.get(1)));
-        //commands[0]+=(int)speedCtrl;
-        //commands[1]+=(int)speedCtrl;
+        commands[0]+=(int)speedCtrl;
+        commands[1]+=(int)speedCtrl;
         if(Math.abs(commands[0]) <=minPwm)
         {
             commands[0]=0;
@@ -61,6 +61,42 @@ public class ControlUtils {
         commands[1]=Math.min(Math.max(-maxPwm,commands[1]),maxPwm);
         Log.i(TAG, "inferWifiCommands: " + commands);
         return commands;
+    }
+    public static int[] inferWifiCommandsForRotation (double targetAngle, double currentAngle,double distance, int minPwm, int maxPwm)
+    {
+
+        double errorAngle = currentAngle- targetAngle;
+        int[] commands= new int[2];
+        double controller;
+        if (distance <=5)
+        {
+            commands[0] = 0;
+            commands[1] = 0;
+            return commands;
+        }
+        Log.i(TAG, "inferWifiCommandsForRotation: " + errorAngle);
+        if(errorAngle<=180)
+        {
+            controller = 2*errorAngle/180*255;
+        }
+        else
+        {
+            controller = 2*(errorAngle - 360)/180*255;
+        }
+        commands[0]=(int)-controller;
+        commands[1]=(int)controller;
+        if(Math.abs(controller) <=minPwm)
+        {
+            commands[0]=190;
+            commands[1]=190;
+        }
+
+        commands[0]=Math.min(Math.max(-maxPwm,commands[0]),maxPwm);
+        commands[1]=Math.min(Math.max(-maxPwm,commands[1]),maxPwm);
+        return commands;
+
+
+
     }
     private static void addFloatToList(Float floatToList,List<Float> floatList, int maxListSize) {
         if (floatList.size() >= maxListSize) {

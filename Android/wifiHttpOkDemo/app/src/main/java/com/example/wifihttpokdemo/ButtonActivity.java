@@ -20,7 +20,7 @@ import java.util.concurrent.Executors;
 
 public class ButtonActivity extends AppCompatActivity {
     private SeekBar seekBarL, seekBarR;
-    private TextView textL,textR;
+    private TextView textL,textR,textDistance;
     private int leftState,rightState;
     Executor executor = Executors.newSingleThreadExecutor();
 
@@ -32,6 +32,7 @@ public class ButtonActivity extends AppCompatActivity {
         seekBarR=findViewById(R.id.seekBarR);
         textL=findViewById(R.id.textViewL);
         textR=findViewById(R.id.textViewR);
+        textDistance = findViewById(R.id.textViewDist);
         seekBarL.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -80,8 +81,9 @@ public class ButtonActivity extends AppCompatActivity {
             executor.execute(new Runnable() {   //set execution on executor thread
                 @Override
                 public void run() {     //execute when running
-                    wifiManager.getUrl("http://" + "192.168.4.1" + "/" + command);   //format command by given ip address on previous intent
-
+                    String response;
+                    response = wifiManager.getUrl("http://" + "192.168.4.1" + "/" + command);   //format command by given ip address on previous intent
+                    textDistance.setText(response);
                 }
             });
         }

@@ -9,6 +9,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
@@ -21,9 +22,25 @@ import java.io.IOException;
 public class MainActivity extends AppCompatActivity {
     private SensorManager sensorManager;
     private final String TAG = "main";
-    private Sensor rotationVectorSensor;
+    private Sensor rotationVectorSensor, linearAccelerationSensor;
     private boolean isListening = false; // Track whether the sensor should be listening
     TextView sensorDataView;
+    public Handler handler = new Handler();
+    float theta, xRot, xAcc, yRot, yAcc, zRot, zAcc;
+    public Runnable runnable = new Runnable() {
+        @Override
+        public void run() {
+            if(isListening==true)
+            {
+
+                long timestamp = System.currentTimeMillis();
+                saveToFile(timestamp,theta, xRot, yRot, zRot, xAcc, yAcc, zAcc);
+
+            }
+
+            handler.postDelayed(runnable , 10);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
 
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        linearAccelerationSensor= sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
 
         Button startButton = findViewById(R.id.startButton);
         Button stopButton = findViewById(R.id.stopButton);
@@ -43,30 +61,37 @@ public class MainActivity extends AppCompatActivity {
         resetButton.setOnClickListener(v -> resetSensor());
 
         createFile();
-        if (rotationVectorSensor != null) {
+        if (rotationVectorSensor != null && linearAccelerationSensor != null) {
             // The sensor exists
+            sensorManager.registerListener(sensorEventListener, linearAccelerationSensor, 1000*10,SensorManager.SENSOR_DELAY_FASTEST);
             sensorManager.registerListener(sensorEventListener, rotationVectorSensor,1000*10,SensorManager.SENSOR_DELAY_FASTEST);
-            Toast.makeText(this, "Rotation Vector Sensor is available", Toast.LENGTH_SHORT).show();
+
+            Toast.makeText(this, "Sensor is available", Toast.LENGTH_SHORT).show();
+            handler.post(runnable);
         } else {
             // The sensor is not available
-            Toast.makeText(this, "Rotation Vector Sensor is not available", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Sensor is not available", Toast.LENGTH_SHORT).show();
         }
+
     }
     private final SensorEventListener sensorEventListener = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
             if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR && isListening) {
                 // Capture the event timestamp as close to the reading as possible
-                long timestamp = System.currentTimeMillis();
 
                 // Extract the x, y, and z values
-                float theta = event.values[3];
-                float x = event.values[0];
-                float y = event.values[1];
-                float z = event.values[2];
+                theta = event.values[3];
+                xRot = event.values[0];
+                yRot = event.values[1];
+                zRot = event.values[2];
 
                 // Save to a file (handled in the next section)
-                saveToFile(timestamp,theta, x, y, z);
+            }
+            if (event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION && isListening) {
+                xAcc = event.values[0];
+                yAcc = event.values[1];
+                zAcc = event.values[2];
             }
         }
 
@@ -75,9 +100,11 @@ public class MainActivity extends AppCompatActivity {
             // Handle sensor accuracy changes if necessary
         }
     };
-    private void saveToFile(long timestamp, float theta ,float x, float y, float z) {
-        String data = timestamp + " " + theta + " " + x + " " + y + " " + z + "\n";
-        sensorDataView.setText(data);
+    private void saveToFile(long timestamp, float theta ,float xRot, float yRot, float zRot, float xAcc, float yAcc, float zAcc) {
+        String data = timestamp + " " + theta + " " + xRot + " " + yRot + " " + zRot +" "+xAcc+" "+yAcc+" "+zAcc+ "\n";
+        //eulerRollDeg =180/pi.* atan2((2*(quatSensor(:,1).*quatSensor(:,4) - quatSensor(:,2).* quatSensor(:,3))) , ( 1 - 2.* (quatSensor(:,2).*quatSensor(:,2) + quatSensor(:,4).*quatSensor(:,4))))
+        double roll = 180/Math.PI*Math.atan2(2*(theta*zRot - xRot*yRot), 1 - 2* (xRot*xRot + zRot*zRot));
+        sensorDataView.setText(Double.toString(roll));
 
         // Assuming you have the necessary permissions and have handled runtime permissions
         File file = new File(getFilesDir(), "sensor_data.txt");
@@ -127,7 +154,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void startSensor() {
         if (!isListening && rotationVectorSensor != null) {
-            sensorManager.registerListener(sensorEventListener, rotationVectorSensor, 1000*10);
+            sensorManager.registerListener(sensorEventListener, rotationVectorSensor, 1000*10,SensorManager.SENSOR_DELAY_FASTEST);
+            sensorManager.registerListener(sensorEventListener, linearAccelerationSensor,1000*10,SensorManager.SENSOR_DELAY_FASTEST);
             isListening = true;
             // Add any other actions to take when starting, e.g., showing a message
         }
