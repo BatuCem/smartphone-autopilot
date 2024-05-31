@@ -1,8 +1,6 @@
 package com.example.autopilot;
 
 import android.util.Log;
-import android.widget.EditText;
-import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,8 +33,10 @@ public class ControlUtils {
 
         }
     }
-    public static int[] inferWifiCommands(int minPwm,int maxPwm,int maxCentering, int maxAreaControl,int centerScaler,int areaScaler, int[] controlParamsCenter, int[] controlParamsArea)
+    public static int[] inferWifiCommands(int minPwm,int maxPwm,int maxCentering, int maxAreaControl,int centerScaler,int areaScaler, Double[] controlParams)
     {
+        Double[] controlParamsCenter = controlParams;
+        Double[] controlParamsArea = controlParams;
         if(centerMemory.size()==0 || areaMemory.size()==0)
         {
             centerMemory.add(0f);
@@ -48,22 +48,22 @@ public class ControlUtils {
         float errorCenter = 0.5f - ImageUtils.rectXCenter;
         addFloatToList(errorCenter,centerMemory,2);
         centerAccumulator+=errorCenter;
-        float centering = (errorCenter*controlParamsCenter[0] + centerAccumulator*controlParamsCenter[1] + (centerMemory.get(0)-centerMemory.get(1))*controlParamsCenter[2])*centerScaler;
+        Double centering = (errorCenter*controlParamsCenter[0] + centerAccumulator*controlParamsCenter[1] + (centerMemory.get(0)-centerMemory.get(1))*controlParamsCenter[2])*centerScaler;
         centering=Math.min(Math.max(-maxCentering,centering),maxCentering);
-        Log.i(TAG, "SpeedCtrl centering: "+Float.toString(centering));
-        commands[0]=(int)(-centering);
-        commands[1]=(int)(centering);
+        Log.i(TAG, "SpeedCtrl centering: "+Double.toString(centering));
+        commands[0]=(int)(-centering.intValue());
+        commands[1]=(int)(centering.intValue());
 
 
         float errorArea=0.25f-ImageUtils.rectArea;
         addFloatToList(errorArea,areaMemory,2);
         areaAccumulator+=errorArea;
-        float speedCtrl = (errorArea*controlParamsArea[0] + areaAccumulator*controlParamsArea[1] + (areaMemory.get(0)- areaMemory.get(1))*controlParamsArea[2])*areaScaler;
+        Double speedCtrl = (errorArea*controlParamsArea[0] + areaAccumulator*controlParamsArea[1] + (areaMemory.get(0)- areaMemory.get(1))*controlParamsArea[2])*areaScaler;
         speedCtrl=Math.min(Math.max(-maxAreaControl,speedCtrl),maxAreaControl);
         Log.i(TAG, "SpeedCtrl area: "+"Error: "+errorArea + "Integral: "+areaAccumulator + "Derivative: " + (areaMemory.get(0)- areaMemory.get(1)));
         Log.i(TAG, "SpeedCtrl center: "+"Error: "+errorCenter + "Integral: "+centerAccumulator + "Derivative: " + (centerMemory.get(0)- centerMemory.get(1)));
-        commands[0]+=(int)speedCtrl;
-        commands[1]+=(int)speedCtrl;
+        commands[0]+=(int)speedCtrl.intValue();
+        commands[1]+=(int)speedCtrl.intValue();
         if(Math.abs(commands[0]) <=minPwm)
         {
             commands[0]=0;

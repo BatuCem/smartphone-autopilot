@@ -15,6 +15,7 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -34,6 +35,7 @@ public class SettingsActivity extends AppCompatActivity {
     private CheckBox proximitySensorCheckBox, backCameraAutoId, frontCameraAutoId;
     private Button initializeProgramButton, backAddIdButton, frontAddIdButton;
     private TextView backCameraIdList, frontCameraIdList;
+    private SeekBar pBar, iBar, dBar;
     //declare user input values (public)
     public static String wifiIp = "191.168.4.1";
     public static boolean proximitySensorEnabled = false;
@@ -45,6 +47,8 @@ public class SettingsActivity extends AppCompatActivity {
     public static int detectionType=0;
     public static int operationMode=0;
     public static int driveMode = 0;
+    private TextView pTextView, iTextView, dTextView;
+    public static Double P=1.0,I=0.0,D=0.0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,11 +63,17 @@ public class SettingsActivity extends AppCompatActivity {
         // Set up button listeners
         setupButtonListeners();
 
+        //Set up seek bar listeners
+        setupSeekBarListeners();
+
         // Set up immediate settings listeners
         setupImmediateListeners();
     }
 
     private void initializeComponents() {
+        pTextView = findViewById(R.id.pTextView);
+        iTextView = findViewById(R.id.iTextView);
+        dTextView = findViewById(R.id.dTextView);
         wifiIpEditText = findViewById(R.id.wifi_ip);
         wifiIpEditText.setText(wifiIp);
         flashThresholdEditText = findViewById(R.id.flash_threshold);
@@ -86,6 +96,15 @@ public class SettingsActivity extends AppCompatActivity {
         objectTrackSpinner = findViewById(R.id.object_track);
         operationModeSpinner = findViewById(R.id.operation_mode);
         driveModeSpinner = findViewById(R.id.drive_mode);
+        pBar = findViewById(R.id.pBar);
+        iBar = findViewById(R.id.iBar);
+        dBar = findViewById(R.id.dBar);
+        pTextView.setText("P: "+P);
+        dTextView.setText("D: "+D);
+        iTextView.setText("I: "+I);
+        pBar.setProgress(P.intValue()*200);
+        iBar.setProgress(I.intValue()*200);
+        dBar.setProgress(D.intValue()*200);
 
     }
 
@@ -247,6 +266,63 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
 
+    }
+    private void setupSeekBarListeners()
+    {
+        pBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {;
+                P = progress/200.0;
+                pTextView.setText("P: "+P);
+                Log.i(TAG, "onProgressChanged: P"+ P);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+        iBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                I = progress/200.0;;
+                iTextView.setText("I: "+I);
+                Log.i(TAG, "onProgressChanged: I"+ progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+        dBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                D = progress/200.0;
+                dTextView.setText("D: "+D);
+                Log.i(TAG, "onProgressChanged: D"+ D);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
     }
 
     private void addIdToList(EditText editText, List<String> idList, TextView textView, int maxListSize) {

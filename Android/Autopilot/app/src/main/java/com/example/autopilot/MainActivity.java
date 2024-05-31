@@ -34,7 +34,6 @@ import java.util.stream.IntStream;
 public class MainActivity extends AppCompatActivity {
 
     private String TAG = "MainApp";
-    private static final int ControlSampling = 50;
     private Toolbar appBar;
     private ImageCaptureManager imageCaptureManager;
     private DetectionTensorflow detectionTensorflow;
@@ -50,111 +49,6 @@ public class MainActivity extends AppCompatActivity {
     public static int [] lidarMap = new int[LidarActivity.lidarArraySize];
     private int driveState;
     private Double slope, slopeAbs;
-
-
-    private Runnable systemRunnable = new Runnable() {
-        @Override
-        public void run() {
-            try (Socket socket = new Socket("192.168.4.1", 80);
-                 OutputStream outputStream = socket.getOutputStream();
-                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-                int[] commands = new int[2];
-                driveState = 0;
-
-
-                    if((SettingsActivity.proximitySensorEnabled==true && SensorUtil.proximityCondition==true) || SettingsActivity.proximitySensorEnabled==false)
-                    {
-                        if(SettingsActivity.operationMode==0)
-                        {
-                            commands=ControlUtils.inferWifiCommands(50,255,240,255,255*2,1000,new int[]  {1,0,0},new int[] {1,0,0});
-                            String messageToSend=ControlUtils.commandIntegers(commands[0],commands[1]);
-                            outputStream.write(messageToSend.getBytes());
-                            outputStream.flush();
-                            Log.i(TAG, "0000 Command Sent: "+ messageToSend);
-                        }
-                        else
-                        {
-                            if(SensorUtil.distanceGPS>5)
-                            {
-                                int minLidarFront = IntStream.range(8,10).map(i -> lidarMap[i]).min().getAsInt();
-                                if(minLidarFront <= 100)
-                                {
-                                    driveState = 1;
-                                    slope = Math.atan2(lidarMap[80]*Math.sin(80)- lidarMap[100]*Math.sin(100)
-                                            ,lidarMap[80]*Math.cos(80)-lidarMap[100]*Math.cos(100))*180/Math.PI;
-                                    commands = ControlUtils.inferWifiCommandsForRotation(slope, SensorUtil.rotation,SensorUtil.distanceGPS,125,255, new double[]{1,0,0});
-                                    String commandWifi = ControlUtils.commandIntegers(commands[0],commands[1]);
-                                    WifiManager.requestToUrl(commandWifi,getBaseContext());
-                                    Log.i(TAG, "obstacle 0001 Command Sent: "+ commandWifi);
-                                }
-                                else {
-                                    if(driveState==0)
-                                    {
-
-                                        commands = ControlUtils.inferWifiCommandsForRotation(SensorUtil.bearingGPS, SensorUtil.rotation,SensorUtil.distanceGPS,125,255, new double[]{1,0,0});
-                                        String commandWifi = ControlUtils.commandIntegers(commands[0],commands[1]);
-                                        WifiManager.requestToUrl(commandWifi,getBaseContext());
-                                        Log.i(TAG, "cruise 0001 Command Sent: "+ commandWifi);
-                                    }
-                                    else {
-                                        commands = ControlUtils.inferWifiCommandsForRotation(slope, SensorUtil.rotation,SensorUtil.distanceGPS,125,255, new double[]{1,0,0});
-                                        String commandWifi = ControlUtils.commandIntegers(commands[0],commands[1]);
-                                        WifiManager.requestToUrl(commandWifi,getBaseContext());
-                                        Log.i(TAG, "obstacle 0001 Command Sent: "+ commandWifi);
-                                        if(((slope<0) &&(IntStream.range(0,1).map(i -> lidarMap[i]).min().getAsInt() > 100)) || ((slope>0) &&(IntStream.range(17,18).map(i -> lidarMap[i]).min().getAsInt() > 100)))
-                                        {
-                                            driveState = 0;
-                                        }
-                                        else {
-                                            driveState = 1;
-                                        }
-                                    }
-
-                                }
-
-                            }
-                            else{
-                                String commandWifi = ControlUtils.commandIntegers(0,0);
-                                WifiManager.requestToUrl(commandWifi,getBaseContext());
-                                Log.i(TAG, "idle 0001 Command Sent: "+ commandWifi);
-                            }
-
-                            //commands = ControlUtils.inferWifiCommandsForRotation(0, SensorUtil.rotation,SensorUtil.distanceGPS,125,255, new double[]{2,0.0002,0});
-                            //String commandWifi = ControlUtils.commandIntegers(commands[0],commands[1]);
-                            //WifiManager.requestToUrl(commandWifi,getBaseContext());
-                            //Log.i(TAG, "0001 Command Sent: "+ commandWifi);
-                            // Reading the response from the server
-                            String responseStr = reader.readLine();
-                            System.out.println("Received from server: " + responseStr);
-                            String[] responseStrSplit = responseStr.split(" ");
-                            Log.i(TAG, "getUrl: "+ responseStr);
-                            if(responseStrSplit.length >= 2)
-                            {
-                                try {
-                                    distanceLiDAR = Integer.parseInt(responseStrSplit[0]);
-                                    angleLiDAR = Integer.parseInt(responseStrSplit[1]);
-                                    if(angleLiDAR >= 0 && angleLiDAR < 180)
-                                    {
-                                        lidarMap[(int) angleLiDAR/ LidarActivity.lidarResolution ] = distanceLiDAR;
-                                    }
-                                } catch (NumberFormatException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        }
-
-
-
-                    }
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            systemHandler.postDelayed(systemRunnable,ControlSampling);
-        }
-    };
-
     public static final int REQUEST_CAMERA_PERMISSION = 200;//code for camera permit
     public static final int REQUEST_GPS_PERMISSION = 220;//code for gps permit
     @Override
@@ -258,7 +152,7 @@ public class MainActivity extends AppCompatActivity {
                         {
                             if(SettingsActivity.operationMode==0)
                             {
-                                commands=ControlUtils.inferWifiCommands(50,255,240,255,255*2,1000,new int[]  {1,0,0},new int[] {0,0,0});
+                                commands=ControlUtils.inferWifiCommands(50,255,240,255,255*2,1000,new Double[] {SettingsActivity.P, SettingsActivity.I, SettingsActivity.D});
                                 String messageToSend=ControlUtils.commandIntegers(commands[0],commands[1]);
                                 outputStream.write(messageToSend.getBytes());
                                 outputStream.flush();
@@ -276,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
                                                 ,lidarMap[80/LidarActivity.lidarResolution]*Math.cos(1.3962634016)-lidarMap[100/LidarActivity.lidarResolution]*Math.cos(1.74532925199))*180/Math.PI)%360;
                                         slopeAbs = (90 - slope + SensorUtil.rotation)%360;
                                         Log.i(TAG, "run: slope found : "+slope + "angle2: " + 80/LidarActivity.lidarResolution + "");
-                                        commands = ControlUtils.inferWifiCommandsForRotation(slopeAbs, SensorUtil.rotation,SensorUtil.distanceGPS,125,255, new double[]{2,0.00002,0});
+                                        commands = ControlUtils.inferWifiCommandsForRotation(slopeAbs, SensorUtil.rotation,SensorUtil.distanceGPS,125,255, new double[] {SettingsActivity.P, SettingsActivity.I, SettingsActivity.D});
                                         String commandWifi = ControlUtils.commandIntegers(commands[0],commands[1]);
                                         outputStream.write(commandWifi.getBytes());
                                         outputStream.flush();
@@ -285,14 +179,14 @@ public class MainActivity extends AppCompatActivity {
                                     else {
                                         if(driveState==0)
                                         {
-                                            commands = ControlUtils.inferWifiCommandsForRotation(SensorUtil.bearingGPS, SensorUtil.rotation,SensorUtil.distanceGPS,125,255, new double[]{2,0.00002,0});
+                                            commands = ControlUtils.inferWifiCommandsForRotation(SensorUtil.bearingGPS, SensorUtil.rotation,SensorUtil.distanceGPS,125,255, new double[]{SettingsActivity.P, SettingsActivity.I, SettingsActivity.D});
                                             String commandWifi = ControlUtils.commandIntegers(commands[0],commands[1]);
                                             outputStream.write(commandWifi.getBytes());
                                             outputStream.flush();
                                             Log.i(TAG, "normal cruise 0001 Command Sent: "+ commandWifi);
                                         }
                                         else {
-                                            commands = ControlUtils.inferWifiCommandsForRotation(slopeAbs, SensorUtil.rotation,SensorUtil.distanceGPS,125,255, new double[]{2,0.00002,0});
+                                            commands = ControlUtils.inferWifiCommandsForRotation(slopeAbs, SensorUtil.rotation,SensorUtil.distanceGPS,125,255, new double[]{SettingsActivity.P, SettingsActivity.I, SettingsActivity.D});
                                             String commandWifi = ControlUtils.commandIntegers(commands[0],commands[1]);
                                             outputStream.write(commandWifi.getBytes());
                                             outputStream.flush();
