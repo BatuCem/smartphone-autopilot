@@ -1,12 +1,17 @@
 package com.example.rotationvectortest;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -15,30 +20,42 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
     private SensorManager sensorManager;
     private final String TAG = "main";
+    public static final int REQUEST_GPS_PERMISSION = 220;//code for gps permit
     private Sensor rotationVectorSensor, linearAccelerationSensor;
+    private FusedLocationProviderClient fusedLocationProviderClient;
     private boolean isListening = false; // Track whether the sensor should be listening
     TextView sensorDataView;
+    private double gpsAcc;
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+
     public Handler handler = new Handler();
     float theta, xRot, xAcc, yRot, yAcc, zRot, zAcc;
     public Runnable runnable = new Runnable() {
         @Override
         public void run() {
-            if(isListening==true)
-            {
+            if (isListening == true) {
 
                 long timestamp = System.currentTimeMillis();
-                saveToFile(timestamp,theta, xRot, yRot, zRot, xAcc, yAcc, zAcc);
+                saveToFile(timestamp, theta, xRot, yRot, zRot, xAcc, yAcc, zAcc, gpsAcc);
 
             }
 
-            handler.postDelayed(runnable , 10);
+            handler.postDelayed(runnable, 10);
         }
     };
 
@@ -49,12 +66,18 @@ public class MainActivity extends AppCompatActivity {
 
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-        linearAccelerationSensor= sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        linearAccelerationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY)
+                .setIntervalMillis(1000)
+                .setMinUpdateIntervalMillis(100)
+                .build();
+
 
         Button startButton = findViewById(R.id.startButton);
         Button stopButton = findViewById(R.id.stopButton);
         Button resetButton = findViewById(R.id.resetButton);
-        sensorDataView= findViewById(R.id.sensorDataView);
+        sensorDataView = findViewById(R.id.sensorDataView);
 
         startButton.setOnClickListener(v -> startSensor());
         stopButton.setOnClickListener(v -> stopSensor());
@@ -63,8 +86,14 @@ public class MainActivity extends AppCompatActivity {
         createFile();
         if (rotationVectorSensor != null && linearAccelerationSensor != null) {
             // The sensor exists
-            sensorManager.registerListener(sensorEventListener, linearAccelerationSensor, 1000*10,SensorManager.SENSOR_DELAY_FASTEST);
-            sensorManager.registerListener(sensorEventListener, rotationVectorSensor,1000*10,SensorManager.SENSOR_DELAY_FASTEST);
+            sensorManager.registerListener(sensorEventListener, linearAccelerationSensor, 1000 * 10, SensorManager.SENSOR_DELAY_FASTEST);
+            sensorManager.registerListener(sensorEventListener, rotationVectorSensor, 1000 * 10, SensorManager.SENSOR_DELAY_FASTEST);
+
+            if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                // Permission is not granted; request it from the user
+                ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_GPS_PERMISSION);
+            }
+            fusedLocationProviderClient.requestLocationUpdates(locationRequest, executorService, locationListener);
 
             Toast.makeText(this, "Sensor is available", Toast.LENGTH_SHORT).show();
             handler.post(runnable);
@@ -100,11 +129,18 @@ public class MainActivity extends AppCompatActivity {
             // Handle sensor accuracy changes if necessary
         }
     };
-    private void saveToFile(long timestamp, float theta ,float xRot, float yRot, float zRot, float xAcc, float yAcc, float zAcc) {
-        String data = timestamp + " " + theta + " " + xRot + " " + yRot + " " + zRot +" "+xAcc+" "+yAcc+" "+zAcc+ "\n";
+
+    LocationListener locationListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(@NonNull Location location) {
+            gpsAcc = location.getAccuracy();
+        }
+    };
+    private void saveToFile(long timestamp, float theta ,float xRot, float yRot, float zRot, float xAcc, float yAcc, float zAcc, double gpsAcc) {
+        String data = timestamp + " " + theta + " " + xRot + " " + yRot + " " + zRot +" "+xAcc+" "+yAcc+" "+zAcc+" "+gpsAcc+ "\n";
         //eulerRollDeg =180/pi.* atan2((2*(quatSensor(:,1).*quatSensor(:,4) - quatSensor(:,2).* quatSensor(:,3))) , ( 1 - 2.* (quatSensor(:,2).*quatSensor(:,2) + quatSensor(:,4).*quatSensor(:,4))))
         double roll = 180/Math.PI*Math.atan2(2*(theta*zRot - xRot*yRot), 1 - 2* (xRot*xRot + zRot*zRot));
-        sensorDataView.setText(Double.toString(roll));
+        sensorDataView.setText(Double.toString(gpsAcc));
 
         // Assuming you have the necessary permissions and have handled runtime permissions
         File file = new File(getFilesDir(), "sensor_data.txt");

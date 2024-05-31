@@ -18,20 +18,32 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_launcher_logo000_round"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Autopilot"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCB3HCNEEG_S3dT2sFWvx-DowKBpMq-uso"/>
         <activity
-            android:name=".MapActivity"
+            android:name=".remoteActivity"
             android:screenOrientation="landscape"
             android:exported="false" />
+        <activity
+            android:name=".LidarActivity"
+            android:exported="false"
+            android:label="@string/title_activity_lidar"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.Autopilot" />
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyCB3HCNEEG_S3dT2sFWvx-DowKBpMq-uso" />
+
+        <activity
+            android:name=".MapActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
         <activity
             android:name=".InfoActivity"
             android:exported="false"

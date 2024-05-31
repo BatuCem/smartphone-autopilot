@@ -5,11 +5,9 @@ import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.util.Log;
 import org.tensorflow.lite.Interpreter;
-import org.tensorflow.lite.support.common.ops.NormalizeOp;
 import org.tensorflow.lite.support.image.ImageProcessor;
 import org.tensorflow.lite.support.image.TensorImage;
 import org.tensorflow.lite.support.image.ops.ResizeOp;
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -51,7 +49,7 @@ public class DetectionTensorflow {
     private MappedByteBuffer loadModelFile(Context context) throws IOException {
         //method to load model from file in assets
         //TODO: remove hardcoded file to extend functionality
-        AssetFileDescriptor fileDescriptor = context.getAssets().openFd("1.tflite");
+        AssetFileDescriptor fileDescriptor = context.getAssets().openFd("SSDMobileNetV1.tflite");
         FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
         FileChannel fileChannel = inputStream.getChannel();
         long startOffset = fileDescriptor.getStartOffset();

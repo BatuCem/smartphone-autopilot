@@ -30,7 +30,9 @@ public class InfoActivity extends AppCompatActivity {
             GPSSpeedView.setText("GPS Speed: "+ Double.toString(SensorUtil.GPSData[3]));
             GPSDirectionView.setText("GPS Direction: "+ Double.toString(SensorUtil.GPSData[4]));
             GPSAccuracyView.setText("GPS Accuracy: "+ Double.toString(SensorUtil.GPSData[5]));
-            infoHandler.postDelayed(infoRunnable,100);
+            DistanceLiDARView.setText("LiDAR Distance: " + WifiManager.distanceLiDAR);
+            AngleLiDARView.setText("LiDAR Angle: " + WifiManager.angleLiDAR);
+            infoHandler.postDelayed(infoRunnable,1);
 
         }
     };

@@ -31,23 +31,42 @@ public class ImageUtils {
         paint.setTextSize(mutable.getHeight()/15f);
         paint.setStrokeWidth(mutable.getHeight()/100f);
         paint.setColor(Color.RED);
+        paint.setStyle(Paint.Style.STROKE);
+        float[][] rectArray = ((float[][][])detectionTensorflow.outputMap.get(0))[0];
+        RectF[] rawDetectionArray = new RectF[10];
+        for(int i = 0; i<10;i++)
+        {
+            if(((float [][]) detectionTensorflow.outputMap.get(2))[0][i]>=confidence && (int)(((float[][]) detectionTensorflow.outputMap.get(1))[0][i])==SettingsActivity.detectionType)
+            {
+                rawDetectionArray[i] = new RectF(rectArray[i][1],rectArray[i][0],rectArray[i][3],rectArray[i][2]);
+                if((rawDetectionArray[i].centerX()<rectXCenter*1.2 && rawDetectionArray[i].centerX()>rectXCenter*0.8))
+                        {
+                            RectF detection=new RectF(rectArray[i][1]*bitmap.getWidth(),rectArray[i][0]*bitmap.getHeight(),rectArray[i][3]*bitmap.getWidth(),rectArray[i][2]*bitmap.getHeight());
+                            rectXCenter=rawDetectionArray[i].centerX();
+                            rectArea=(rawDetectionArray[i].right-rawDetectionArray[i].left)*(rawDetectionArray[i].bottom-rawDetectionArray[i].top);
+                            canvas.drawRect(detection,paint);
+                            paint.setStyle(Paint.Style.FILL);
+                            paint.setTextSize(50f);
+                            canvas.drawText(DetectionTensorflow.labels[(int)(((float[][]) detectionTensorflow.outputMap.get(1))[0][i])]+" "+Float.toString(((float[][]) detectionTensorflow.outputMap.get(2))[0][i]),rectArray[i][1]*bitmap.getWidth() ,rectArray[i][0]*bitmap.getHeight()-10,paint);
+                            Log.i(TAG, "drawRectF: timemeasured"+(System.currentTimeMillis()-tinit));
+                            return Bitmap.createBitmap(mutable);  //ensure only one object is tracked
+                        }
+            }
+        }
         for(int i=0;i<10;i++)
         {
             if(((float [][]) detectionTensorflow.outputMap.get(2))[0][i]>=confidence && (int)(((float[][]) detectionTensorflow.outputMap.get(1))[0][i])==SettingsActivity.detectionType)//check scores and object type search condition
             {
                 paint.setStyle(Paint.Style.STROKE);
-                float[] rectArray =((float[][][])detectionTensorflow.outputMap.get(0))[0][i];
-                RectF rawDetection=new RectF(rectArray[1],rectArray[0],rectArray[3],rectArray[2]);
-                RectF detection=new RectF(rectArray[1]*bitmap.getWidth(),rectArray[0]*bitmap.getHeight(),rectArray[3]*bitmap.getWidth(),rectArray[2]*bitmap.getHeight());
+                RectF rawDetection=new RectF(rectArray[i][1],rectArray[i][0],rectArray[i][3],rectArray[i][2]);
+                RectF detection=new RectF(rectArray[i][1]*bitmap.getWidth(),rectArray[i][0]*bitmap.getHeight(),rectArray[i][3]*bitmap.getWidth(),rectArray[i][2]*bitmap.getHeight());
                 rectXCenter=rawDetection.centerX();
                 rectArea=(rawDetection.right-rawDetection.left)*(rawDetection.bottom-rawDetection.top);
                 canvas.drawRect(detection,paint);
                 paint.setStyle(Paint.Style.FILL);
                 paint.setTextSize(50f);
-                canvas.drawText(DetectionTensorflow.labels[(int)(((float[][]) detectionTensorflow.outputMap.get(1))[0][i])]+" "+Float.toString(((float[][]) detectionTensorflow.outputMap.get(2))[0][i]),rectArray[1]*bitmap.getWidth() ,rectArray[0]*bitmap.getHeight()-10,paint);
+                canvas.drawText(DetectionTensorflow.labels[(int)(((float[][]) detectionTensorflow.outputMap.get(1))[0][i])]+" "+Float.toString(((float[][]) detectionTensorflow.outputMap.get(2))[0][i]),rectArray[i][1]*bitmap.getWidth() ,rectArray[i][0]*bitmap.getHeight()-10,paint);
                 break;  //ensure only one object is tracked
-
-
             }
         }
         Log.i(TAG, "drawRectF: timemeasured"+(System.currentTimeMillis()-tinit));

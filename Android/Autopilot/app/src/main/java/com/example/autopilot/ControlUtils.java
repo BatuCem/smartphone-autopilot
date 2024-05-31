@@ -12,13 +12,28 @@ public class ControlUtils {
     private static final String TAG = "ControlUtils"; //TAG for logging
 
     private static List<Float> centerMemory= new ArrayList<>(), areaMemory = new ArrayList<>();
+    private static List<Float> distanceMemory= new ArrayList<>(), angleMemory = new ArrayList<>();
     private static float centerAccumulator = 0, areaAccumulator=0;
+    private static float angleAccumulator = 0;
     public static String commandIntegers (int left, int right)
     {   //Method to implement creating a string command from left/right motor speeds
-        String leftString = (left >= 0 ? "+" : "-") + String.format("%03d", Math.abs(left));
-        String rightString = (right >= 0 ? "+" : "-") + String.format("%03d", Math.abs(right));
-        Log.i(TAG, "commandIntegers: "+leftString+rightString);//format"+017-195" type command
-        return leftString+rightString;
+        if(SettingsActivity.driveMode == 0)
+        {
+            String leftString = (left >= 0 ? "+" : "-") + String.format("%03d", Math.abs(left));
+            String rightString = (right >= 0 ? "+" : "-") + String.format("%03d", Math.abs(right));
+            Log.i(TAG, "commandIntegers 4wd: "+leftString+rightString);//format"+017-195" type command
+            return leftString+rightString+"\n";
+        }
+        else {
+            //TODO: Make sure of operation
+            int angle = Math.min(Math.max(80,90*(right-left)/(2*255) + 100),120);
+            int speed = ((left+right)/2)%255;
+            String angleString = (angle >= 0 ? "+" : "-") + String.format("%03d",Math.abs(angle));
+            String speedString = (speed == 0 ? "+000" : (speed > 0 ? "+255" : "-255"));
+            Log.i(TAG, "commandIntegers steering: "+angleString+speedString);//format"+017-195" type command
+            return angleString+speedString+"\n";
+
+        }
     }
     public static int[] inferWifiCommands(int minPwm,int maxPwm,int maxCentering, int maxAreaControl,int centerScaler,int areaScaler, int[] controlParamsCenter, int[] controlParamsArea)
     {
@@ -62,33 +77,49 @@ public class ControlUtils {
         Log.i(TAG, "inferWifiCommands: " + commands);
         return commands;
     }
-    public static int[] inferWifiCommandsForRotation (double targetAngle, double currentAngle,double distance, int minPwm, int maxPwm)
+    public static int[] inferWifiCommandsForRotation (double targetAngle, double currentAngle,double distance, int minPwm, int maxPwm, double[] controlParamsAngle)
     {
-
+        //TODO: make sure that the multiplexed PID is working as intended
+        if(angleMemory.size()==0)
+        {
+            angleMemory.add(0f);
+        }
         double errorAngle = currentAngle- targetAngle;
+        Log.i(TAG, "inferWifiCommandsForRotation: angle read: "+currentAngle);
         int[] commands= new int[2];
         double controller;
         if (distance <=5)
-        {
-            commands[0] = 0;
-            commands[1] = 0;
-            return commands;
-        }
+    {
+        commands[0] = 0;
+        commands[1] = 0;
+        return commands;
+    }
         Log.i(TAG, "inferWifiCommandsForRotation: " + errorAngle);
         if(errorAngle<=180)
         {
-            controller = 2*errorAngle/180*255;
+            angleAccumulator = Math.min(Math.max(-2048,(float) errorAngle + angleAccumulator),2048);
+            addFloatToList((float)errorAngle,angleMemory,2);
+            controller =255*(controlParamsAngle[0]*errorAngle/180
+                    + controlParamsAngle[1]*angleAccumulator
+                    + controlParamsAngle[2]*(angleMemory.get(0) - angleMemory.get(1)));
+            Log.i(TAG, "SpeedCtrl area: "+"Error: "+errorAngle + "Integral: "+angleAccumulator + "Derivative: " + (angleMemory.get(0)- angleMemory.get(1)));
+
         }
         else
         {
-            controller = 2*(errorAngle - 360)/180*255;
+            angleAccumulator = Math.min(Math.max(-2048,(float) errorAngle + angleAccumulator - 360),2048);
+            addFloatToList((float) (errorAngle - 360.0),angleMemory,2);
+            controller =255*(controlParamsAngle[0]*(errorAngle - 360)/180
+                    + controlParamsAngle[1]*angleAccumulator
+                    + controlParamsAngle[2]*(angleMemory.get(0) - angleMemory.get(1)));
+            Log.i(TAG, "SpeedCtrl area: "+"Error: "+errorAngle + "Integral: "+angleAccumulator + "Derivative: " + (angleMemory.get(0)- angleMemory.get(1)));
         }
         commands[0]=(int)-controller;
         commands[1]=(int)controller;
         if(Math.abs(controller) <=minPwm)
         {
-            commands[0]=190;
-            commands[1]=190;
+            commands[0]=200;
+            commands[1]=200;
         }
 
         commands[0]=Math.min(Math.max(-maxPwm,commands[0]),maxPwm);

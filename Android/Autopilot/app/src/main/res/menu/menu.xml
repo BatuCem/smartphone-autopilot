@@ -17,5 +17,15 @@
         android:icon="@drawable/ic_maps"
         android:id="@+id/maps"
         app:showAsAction="ifRoom"/>
+    <item
+        android:title="Remote"
+        android:icon="@drawable/ic_remote"
+        android:id="@+id/remote"
+        app:showAsAction="ifRoom"/>
+    <item
+        android:title="Lidar"
+        android:icon="@drawable/ic_lidar"
+        android:id="@+id/lidar"
+        app:showAsAction="never"/>
 
 </menu>

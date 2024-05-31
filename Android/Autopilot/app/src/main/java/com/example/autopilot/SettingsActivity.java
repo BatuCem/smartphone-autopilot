@@ -27,33 +27,24 @@ public class SettingsActivity extends AppCompatActivity {
     //class to implement Settings layout in GUI and get simultaneous/set-up settings
     private String TAG="SettingsActivity";
 
-    private static final String SHARED_PREFS = "Settings";
-    private static final String WiFiKey= "WifiKey";
-    private static final String ProximityEnabled = "ProxKey";
-    private static final String BackCameraAutoIdEnabled = "BackAutoKey";
-    private static final String FrontCameraAutoIdEnabled = "FrontAutoKey";
-    private static final String FlashThreshold = "FlashKey";
-    private static final String ObjectTracked = "ObjectKey";
-    private static final String BackCameraQuantity = "BackQuantityKey";
-    private static final String FrontCameraQuantity = "FrontQuantityKey";
-    private static final String BackCameraIdList = "BackIdKey";
-    private static final String FrontCameraIdList = "FrontIdKey";
-    private SharedPreferences sharedPreferences;
 
     //declare GUI elements
     private EditText wifiIpEditText, flashThresholdEditText, backManualIdInput, frontManualIdInput;
-    private Spinner backCameraSpinner, frontCameraSpinner, objectTrackSpinner;
+    private Spinner backCameraSpinner, frontCameraSpinner, objectTrackSpinner, operationModeSpinner,driveModeSpinner;
     private CheckBox proximitySensorCheckBox, backCameraAutoId, frontCameraAutoId;
     private Button initializeProgramButton, backAddIdButton, frontAddIdButton;
     private TextView backCameraIdList, frontCameraIdList;
     //declare user input values (public)
-    public static String wifiIp;
-    public static boolean proximitySensorEnabled;
-    public static int flashThreshold;
+    public static String wifiIp = "191.168.4.1";
+    public static boolean proximitySensorEnabled = false;
+    public static int flashThreshold = 5;
     public static List<String> backCameraIds = new ArrayList<>();
     public static List<String> frontCameraIds = new ArrayList<>();
-    public static boolean backCameraAutoIdEnabled, frontCameraAutoIdEnabled;
-    public static int backCameraSpinnerValue, frontCameraSpinnerValue, detectionType;
+    public static boolean backCameraAutoIdEnabled = true, frontCameraAutoIdEnabled = true;
+    public static int backCameraSpinnerValue, frontCameraSpinnerValue;
+    public static int detectionType=0;
+    public static int operationMode=0;
+    public static int driveMode = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,8 +53,6 @@ public class SettingsActivity extends AppCompatActivity {
 
         // Initialize components
         initializeComponents(); //connect declared GUI elements to layout
-
-        sharedPreferences = getSharedPreferences(SHARED_PREFS, MODE_PRIVATE);
         // Setup Spinners
         setupSpinners();
 
@@ -72,29 +61,32 @@ public class SettingsActivity extends AppCompatActivity {
 
         // Set up immediate settings listeners
         setupImmediateListeners();
-        // Set up defaults for immediate settings
-        wifiIp="192.168.4.1";
-        proximitySensorEnabled=false;
-        flashThreshold=5;
-        detectionType=0;
     }
 
     private void initializeComponents() {
         wifiIpEditText = findViewById(R.id.wifi_ip);
+        wifiIpEditText.setText(wifiIp);
         flashThresholdEditText = findViewById(R.id.flash_threshold);
+        flashThresholdEditText.setText(Integer.toString(flashThreshold));
         backManualIdInput = findViewById(R.id.back_manual_id_input);
         frontManualIdInput = findViewById(R.id.front_manual_id_input);
         backCameraSpinner = findViewById(R.id.back_camera_spinner);
         frontCameraSpinner = findViewById(R.id.front_camera_spinner);
         proximitySensorCheckBox = findViewById(R.id.proximity_sensor);
+        proximitySensorCheckBox.setChecked(proximitySensorEnabled);
         backCameraAutoId = findViewById(R.id.back_camera_auto_id);
+        backCameraAutoId.setChecked(backCameraAutoIdEnabled);
         frontCameraAutoId = findViewById(R.id.front_camera_auto_id);
+        frontCameraAutoId.setChecked(frontCameraAutoIdEnabled);
         initializeProgramButton = findViewById(R.id.initialize_program_button);
         backAddIdButton = findViewById(R.id.back_add_id_button);
         frontAddIdButton = findViewById(R.id.front_add_id_button);
         backCameraIdList = findViewById(R.id.back_camera_id_list);
         frontCameraIdList = findViewById(R.id.front_camera_id_list);
         objectTrackSpinner = findViewById(R.id.object_track);
+        operationModeSpinner = findViewById(R.id.operation_mode);
+        driveModeSpinner = findViewById(R.id.drive_mode);
+
     }
 
     private void setupSpinners() {
@@ -102,10 +94,20 @@ public class SettingsActivity extends AppCompatActivity {
         ArrayAdapter<Integer> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, new Integer[]{0, 1, 2, 3});
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         backCameraSpinner.setAdapter(adapter);
+        backCameraSpinner.setSelection(backCameraSpinnerValue);
         frontCameraSpinner.setAdapter(adapter);
+        frontCameraSpinner.setSelection(frontCameraSpinnerValue);
         ArrayAdapter<String> adapterString = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, DetectionTensorflow.labels);
         adapterString.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         objectTrackSpinner.setAdapter(adapterString);
+        objectTrackSpinner.setSelection(detectionType);
+        ArrayAdapter<String> adapterMode = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, new String[]{"Tracking","GPS Based Solver","Remote Control"});
+        operationModeSpinner.setAdapter(adapterMode);
+        operationModeSpinner.setSelection(operationMode);
+        ArrayAdapter<String> adapterDrive = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, new String[]{"4WD","Steering Drive"});
+        driveModeSpinner.setAdapter(adapterDrive);
+        driveModeSpinner.setSelection(driveMode);
+
     }
 
     private void setupButtonListeners() {
@@ -155,6 +157,31 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 detectionType = position;
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        operationModeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                operationMode=position;
+                Log.i(TAG, "onItemSelected: "+position);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+        driveModeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                driveMode=position;
+                Log.i(TAG, "onItemSelected: "+position);
             }
 
             @Override
@@ -259,43 +286,5 @@ public class SettingsActivity extends AppCompatActivity {
     private void showToast(String message) {
         Toast.makeText(SettingsActivity.this, message, Toast.LENGTH_SHORT).show();
     }
-    private void restoreSettings()
-    {
 
-        wifiIp=sharedPreferences.getString(WiFiKey,"192.168.4.1");
-        wifiIpEditText.setText(wifiIp);
-
-        proximitySensorEnabled = sharedPreferences.getBoolean(ProximityEnabled, false);
-        proximitySensorCheckBox.setChecked(proximitySensorEnabled);
-
-        backCameraAutoIdEnabled = sharedPreferences.getBoolean(BackCameraAutoIdEnabled,true);
-        backCameraAutoId.setChecked(backCameraAutoIdEnabled);
-
-        frontCameraAutoIdEnabled = sharedPreferences.getBoolean(FrontCameraAutoIdEnabled, true);
-        frontCameraAutoId.setChecked(frontCameraAutoIdEnabled);
-
-        flashThreshold = sharedPreferences.getInt(FlashThreshold, 5);
-        flashThresholdEditText.setText(String.valueOf(flashThreshold));
-
-        detectionType = sharedPreferences.getInt(ObjectTracked,0);
-        objectTrackSpinner.setSelection(detectionType); //?
-
-        backCameraSpinnerValue = sharedPreferences.getInt(BackCameraQuantity,0);
-        backCameraSpinner.setSelection(backCameraSpinnerValue);
-
-        frontCameraSpinnerValue = sharedPreferences.getInt(FrontCameraQuantity,0);
-        frontCameraSpinner.setSelection(frontCameraSpinnerValue);
-
-        backCameraIds = sharedPreferences.getStringSet(BackCameraIdList, null).stream().collect(Collectors.toList()); //?
-        backCameraIdList.setText(backCameraIds.toString());
-
-        frontCameraIds = sharedPreferences.getStringSet(FrontCameraIdList,null).stream().collect(Collectors.toList()); //?
-        frontCameraIdList.setText(frontCameraIds.toString());
-        
-
-
-
-
-
-    }
 }
