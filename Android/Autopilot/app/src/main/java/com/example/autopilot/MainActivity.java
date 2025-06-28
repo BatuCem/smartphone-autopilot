@@ -19,8 +19,11 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -127,9 +130,20 @@ public class MainActivity extends AppCompatActivity {
                 Bitmap outputBmp= ImageUtils.drawRectF(bitmap,0.5f,detectionTensorflow,paint);
 
                 runOnUiThread(() -> imageView.setImageBitmap(outputBmp));
-                Log.i(TAG, "onBitmapAvailable: TOTALTIMEMEASURED "+ Long.toString(System.currentTimeMillis()-tInit));
-                FPS = 1000 / (System.currentTimeMillis() - tInit);
+                long tFinal = System.currentTimeMillis();
+                Log.i(TAG, "onBitmapAvailable: TOTALTIMEMEASURED "+ Long.toString(tFinal-tInit));
+                FPS = 1000 / (tFinal - tInit);
+                String data = tFinal + " " + FPS + " " + ImageUtils.successRate + "\n";
+                File file = new File(getFilesDir(), "FPS_data.txt");
+                Log.i(TAG, "saveToFile: "+ getExternalFilesDir(null));
+                try (FileOutputStream fos = new FileOutputStream(file, true)) {
+                    fos.write(data.getBytes());
+                    fos.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Toast.makeText(this,"unable to write", Toast.LENGTH_SHORT).show();
 
+                }
             } finally {
                 isProcessing.set(false);
             }
@@ -168,7 +182,14 @@ public class MainActivity extends AppCompatActivity {
                                         driveState = 1;
                                         slope = (Math.atan2(lidarMap[80/LidarActivity.lidarResolution]*Math.sin(1.3962634016)- lidarMap[100/LidarActivity.lidarResolution]*Math.sin(1.74532925199)
                                                 ,lidarMap[80/LidarActivity.lidarResolution]*Math.cos(1.3962634016)-lidarMap[100/LidarActivity.lidarResolution]*Math.cos(1.74532925199))*180/Math.PI)%360;
-                                        slopeAbs = (90 - slope + SensorUtil.rotation)%360;
+                                        if (slope >= 0)
+                                        {
+                                            slopeAbs = (90 - (slope) + SensorUtil.rotation)%360;
+                                        }
+                                        else{
+
+                                            slopeAbs = (-90 - (slope) + SensorUtil.rotation)%360;
+                                        }
                                         Log.i(TAG, "run: slope found : "+slope + "angle2: " + 80/LidarActivity.lidarResolution + "");
                                         commands = ControlUtils.inferWifiCommandsForRotation(slopeAbs, SensorUtil.rotation,SensorUtil.distanceGPS,125,255, new double[] {SettingsActivity.P, SettingsActivity.I, SettingsActivity.D});
                                         String commandWifi = ControlUtils.commandIntegers(commands[0],commands[1]);
@@ -210,6 +231,37 @@ public class MainActivity extends AppCompatActivity {
                                     Log.i(TAG, "0001 Command Sent: "+ commandWifi);
                                 }
 
+                            }
+                            else if (SettingsActivity.operationMode == 2)
+                            {
+                                    int minLidarFront = IntStream.range(LidarActivity.lidarArraySize/2-1,LidarActivity.lidarArraySize/2+1).map(i -> lidarMap[i]).min().getAsInt();
+                                    if(minLidarFront <= LidarActivity.lidarLevel)
+                                    {
+                                        slope = (Math.atan2(lidarMap[80/LidarActivity.lidarResolution]*Math.sin(1.3962634016)- lidarMap[100/LidarActivity.lidarResolution]*Math.sin(1.74532925199)
+                                                ,lidarMap[80/LidarActivity.lidarResolution]*Math.cos(1.3962634016)-lidarMap[100/LidarActivity.lidarResolution]*Math.cos(1.74532925199))*180/Math.PI)%360;
+                                        if (slope >= 0)
+                                        {
+                                            slopeAbs = (90 - (slope) + SensorUtil.rotation)%360;
+                                        }
+                                        else{
+
+                                            slopeAbs = (-90 - (slope) + SensorUtil.rotation)%360;
+                                        }
+                                        Log.i(TAG, "run2: slope found : "+slope + "absolute: " + slopeAbs + "");
+                                        commands = ControlUtils.inferWifiCommandsForRotation(slopeAbs, SensorUtil.rotation,1000,50,255, new double[] {SettingsActivity.P, SettingsActivity.I, SettingsActivity.D});
+                                        String commandWifi = ControlUtils.commandIntegers(commands[0],commands[1]);
+                                        outputStream.write(commandWifi.getBytes());
+                                        outputStream.flush();
+                                        Log.i(TAG, "obstacle found 0002 Command Sent: "+ commandWifi);
+                                    }
+                                    else {
+                                            //commands = ControlUtils.inferWifiCommandsForRotation(SensorUtil.rotation, SensorUtil.rotation,1000,125,255, new double[]{SettingsActivity.P, SettingsActivity.I, SettingsActivity.D});
+                                            String commandWifi = ControlUtils.commandIntegers(200,200);
+                                            outputStream.write(commandWifi.getBytes());
+                                            outputStream.flush();
+                                            Log.i(TAG, "normal cruise 0002 Command Sent: "+ commandWifi);
+
+                                    }
                             }
                             else
                             {

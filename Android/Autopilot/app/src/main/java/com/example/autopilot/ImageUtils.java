@@ -15,6 +15,7 @@ public class ImageUtils {
     //Method to include image utilities such as conversion from formats or conversion from image gui types
     private static final String TAG ="ImageUtils";
     public static float rectXCenter, rectArea;
+    public static float imageLockingMargin = 0.05f;
     public static Bitmap imageToBitmap(Image image) {
         //method to get Image type to Bitmap
         ByteBuffer buffer = image.getPlanes()[0].getBuffer();
@@ -22,6 +23,7 @@ public class ImageUtils {
         buffer.get(bytes);
         return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, null);
     }
+    public static float successRate = 0.0f;
     public static Bitmap drawRectF(Bitmap bitmap,float confidence,DetectionTensorflow detectionTensorflow, Paint paint)
     {
         long tinit=System.currentTimeMillis();
@@ -39,7 +41,7 @@ public class ImageUtils {
             if(((float [][]) detectionTensorflow.outputMap.get(2))[0][i]>=confidence && (int)(((float[][]) detectionTensorflow.outputMap.get(1))[0][i])==SettingsActivity.detectionType)
             {
                 rawDetectionArray[i] = new RectF(rectArray[i][1],rectArray[i][0],rectArray[i][3],rectArray[i][2]);
-                if((rawDetectionArray[i].centerX()<rectXCenter*1.2 && rawDetectionArray[i].centerX()>rectXCenter*0.8))
+                if((rawDetectionArray[i].centerX()<rectXCenter*(1+imageLockingMargin) && rawDetectionArray[i].centerX()>rectXCenter*(1-imageLockingMargin)))
                         {
                             RectF detection=new RectF(rectArray[i][1]*bitmap.getWidth(),rectArray[i][0]*bitmap.getHeight(),rectArray[i][3]*bitmap.getWidth(),rectArray[i][2]*bitmap.getHeight());
                             rectXCenter=rawDetectionArray[i].centerX();
@@ -47,6 +49,7 @@ public class ImageUtils {
                             canvas.drawRect(detection,paint);
                             paint.setStyle(Paint.Style.FILL);
                             paint.setTextSize(50f);
+                            successRate = ((float[][]) detectionTensorflow.outputMap.get(2))[0][i];
                             canvas.drawText(DetectionTensorflow.labels[(int)(((float[][]) detectionTensorflow.outputMap.get(1))[0][i])]+" "+Float.toString(((float[][]) detectionTensorflow.outputMap.get(2))[0][i]),rectArray[i][1]*bitmap.getWidth() ,rectArray[i][0]*bitmap.getHeight()-10,paint);
                             Log.i(TAG, "drawRectF: timemeasured"+(System.currentTimeMillis()-tinit));
                             return Bitmap.createBitmap(mutable);  //ensure only one object is tracked

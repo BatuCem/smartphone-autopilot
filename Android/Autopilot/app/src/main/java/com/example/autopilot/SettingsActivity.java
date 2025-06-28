@@ -120,7 +120,7 @@ public class SettingsActivity extends AppCompatActivity {
         adapterString.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         objectTrackSpinner.setAdapter(adapterString);
         objectTrackSpinner.setSelection(detectionType);
-        ArrayAdapter<String> adapterMode = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, new String[]{"Tracking","GPS Based Solver","Remote Control"});
+        ArrayAdapter<String> adapterMode = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, new String[]{"Tracking","GPS Based Solver","Free Roam","Remote Control"});
         operationModeSpinner.setAdapter(adapterMode);
         operationModeSpinner.setSelection(operationMode);
         ArrayAdapter<String> adapterDrive = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, new String[]{"4WD","Steering Drive"});

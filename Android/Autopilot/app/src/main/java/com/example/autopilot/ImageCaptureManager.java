@@ -40,7 +40,7 @@ public class ImageCaptureManager extends AppCompatActivity {
     private CameraCharacteristics[] cameraCharacteristics;
     private String[] backCameraIds;
     private String[] frontCameraIds;
-    private static String[] cameraIds;
+    public static String[] cameraIds;
     private static CaptureRequest.Builder[] captureRequestBuilders;
     private static CameraCaptureSession[] captureSessions;
     private Surface[] surfaces;

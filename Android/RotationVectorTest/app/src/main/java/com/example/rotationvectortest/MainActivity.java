@@ -140,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
         String data = timestamp + " " + theta + " " + xRot + " " + yRot + " " + zRot +" "+xAcc+" "+yAcc+" "+zAcc+" "+gpsAcc+ "\n";
         //eulerRollDeg =180/pi.* atan2((2*(quatSensor(:,1).*quatSensor(:,4) - quatSensor(:,2).* quatSensor(:,3))) , ( 1 - 2.* (quatSensor(:,2).*quatSensor(:,2) + quatSensor(:,4).*quatSensor(:,4))))
         double roll = 180/Math.PI*Math.atan2(2*(theta*zRot - xRot*yRot), 1 - 2* (xRot*xRot + zRot*zRot));
-        sensorDataView.setText(Double.toString(gpsAcc));
+        sensorDataView.setText((data));
 
         // Assuming you have the necessary permissions and have handled runtime permissions
         File file = new File(getFilesDir(), "sensor_data.txt");

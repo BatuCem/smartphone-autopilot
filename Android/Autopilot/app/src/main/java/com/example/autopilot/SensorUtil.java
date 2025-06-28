@@ -11,6 +11,7 @@ import android.hardware.SensorManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
 import android.location.Location;
+import android.media.Image;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -61,7 +62,10 @@ public class SensorUtil {
                 {
                     torchCondition = (event.values[0] < SettingsActivity.flashThreshold*0.9);
                 }
-                ImageCaptureManager.flashCameraControl(0,torchCondition);
+                if(ImageCaptureManager.cameraIds.length!=0 && ImageCaptureManager.cameraIds != null)
+                {
+                    ImageCaptureManager.flashCameraControl(Integer.parseInt(ImageCaptureManager.cameraIds[0]),torchCondition);
+                }
                 Log.i(TAG, "onSensorChanged: light "+ event.values[0]);
             }
 
